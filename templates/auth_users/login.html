@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Login" %}{% endblock %}
+{% block body %}
+<div class="d-flex align-items-center justify-content-center" style="min-height:100vh;background:#f4f6f9">
+  <div class="card p-4" style="min-width:360px;max-width:420px;width:100%">
+    <div class="text-center mb-4">
+      <i class="bi bi-buildings display-4" style="color:var(--cesab-blue)"></i>
+      <h4 class="fw-bold mt-2" style="color:var(--cesab-blue)">CESAB Finance</h4>
+      <p class="text-muted small">{% trans "Construction Finance Management" %}</p>
+    </div>
+    {% if form.errors %}
+    <div class="alert alert-danger">{% trans "Invalid username or password." %}</div>
+    {% endif %}
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label">{% trans "Username" %}</label>
+        <input type="text" name="username" class="form-control" autofocus required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">{% trans "Password" %}</label>
+        <input type="password" name="password" class="form-control" required>
+      </div>
+      <button type="submit" class="btn btn-primary w-100">
+        <i class="bi bi-box-arrow-in-right"></i> {% trans "Login" %}
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

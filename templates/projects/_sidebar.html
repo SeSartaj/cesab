@@ -1,0 +1,46 @@
+{% load i18n %}
+<nav class="col-md-2 d-none d-md-block sidebar pt-3 ps-2 pe-2">
+  <p class="text-muted small px-2 mb-1 text-uppercase fw-bold">{{ project.name }}</p>
+  <ul class="nav flex-column gap-1">
+    <li class="nav-item">
+      <a class="nav-link {% if active == 'dashboard' %}active{% endif %}" href="{% url 'projects:dashboard' pk=project.pk %}">
+        <i class="bi bi-speedometer2"></i> {% trans "Dashboard" %}
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if active == 'journal' %}active{% endif %}" href="{% url 'projects:journal' project_pk=project.pk %}">
+        <i class="bi bi-journal-text"></i> {% trans "Journal" %}
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if active == 'coa' %}active{% endif %}" href="{% url 'projects:coa' project_pk=project.pk %}">
+        <i class="bi bi-diagram-3"></i> {% trans "Chart of Accounts" %}
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if active == 'shareholders' %}active{% endif %}" href="{% url 'projects:shareholders' project_pk=project.pk %}">
+        <i class="bi bi-people"></i> {% trans "Shareholders" %}
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if active == 'cashboxes' %}active{% endif %}" href="{% url 'projects:cashboxes' project_pk=project.pk %}">
+        <i class="bi bi-cash-stack"></i> {% trans "Cashboxes" %}
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if active == 'vendors' %}active{% endif %}" href="{% url 'projects:vendors' project_pk=project.pk %}">
+        <i class="bi bi-truck"></i> {% trans "Vendors" %}
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if active == 'employees' %}active{% endif %}" href="{% url 'projects:employees' project_pk=project.pk %}">
+        <i class="bi bi-person-badge"></i> {% trans "Employees" %}
+      </a>
+    </li>
+    <li class="mt-3">
+      <a class="btn btn-sm btn-outline-secondary w-100" href="{% url 'projects:list' %}">
+        <i class="bi bi-arrow-left"></i> {% trans "All Projects" %}
+      </a>
+    </li>
+  </ul>
+</nav>

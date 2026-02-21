@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Cashboxes" %}{% endblock %}
+{% block sidebar %}{% include "projects/_sidebar.html" with active="cashboxes" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5><i class="bi bi-cash-stack"></i> {% trans "Cashboxes" %} — {{ project.name }}</h5>
+  {% if request.user.can_edit %}
+  <a href="{% url 'projects:add_cashbox' project_pk=project.pk %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-circle"></i> {% trans "New Cashbox" %}
+  </a>
+  {% endif %}
+</div>
+<div class="row g-3">
+  {% for cb, bal in cashbox_data %}
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <i class="bi bi-safe2 display-5 text-primary"></i>
+        <h5 class="mt-2">{{ cb.name }}</h5>
+        <div class="text-muted small">{{ cb.currency.code }}</div>
+        <div class="display-6 mt-2 fw-bold {% if bal >= 0 %}text-success{% else %}text-danger{% endif %}">
+          {{ bal|floatformat:2 }}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col"><p class="text-muted text-center py-4">{% trans "No cashboxes yet." %}</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

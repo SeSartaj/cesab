@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ project.name }}{% endblock %}
+
+{% block sidebar %}{% include "projects/_sidebar.html" with active="dashboard" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h4 class="mb-0">{{ project.name }}</h4>
+    <small class="text-muted">{{ project.base_currency.code }} &bull; {{ project.start_date }}</small>
+  </div>
+  {% if request.user.can_edit %}
+  <a href="{% url 'projects:edit' pk=project.pk %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-pencil"></i> {% trans "Edit" %}
+  </a>
+  {% endif %}
+</div>
+
+<!-- KPI cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card text-center">
+      <div class="card-body py-3">
+        <div class="text-muted small">{% trans "Total Income" %}</div>
+        <div class="fs-5 fw-bold text-success">{{ total_income|floatformat:2 }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center">
+      <div class="card-body py-3">
+        <div class="text-muted small">{% trans "Total Expense" %}</div>
+        <div class="fs-5 fw-bold text-danger">{{ total_expense|floatformat:2 }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center">
+      <div class="card-body py-3">
+        <div class="text-muted small">{% trans "Net Profit" %}</div>
+        <div class="fs-5 fw-bold {% if net_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+          {{ net_profit|floatformat:2 }}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center">
+      <div class="card-body py-3">
+        <div class="text-muted small">{% trans "Partners" %}</div>
+        <div class="fs-5 fw-bold text-primary">{{ partner_data|length }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cashboxes -->
+{% if cashbox_data %}
+<div class="card mb-4">
+  <div class="card-header"><i class="bi bi-cash-stack"></i> {% trans "Cashboxes" %}
+    {% if request.user.can_edit %}
+    <a href="{% url 'projects:add_cashbox' project_pk=project.pk %}" class="btn btn-sm btn-light float-end">
+      <i class="bi bi-plus"></i>
+    </a>
+    {% endif %}
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead class="table-light"><tr>
+        <th>{% trans "Cashbox" %}</th><th>{% trans "Currency" %}</th><th class="text-end">{% trans "Balance" %}</th>
+      </tr></thead>
+      <tbody>
+        {% for cb, bal in cashbox_data %}
+        <tr>
+          <td>{{ cb.name }}</td>
+          <td>{{ cb.currency.code }}</td>
+          <td class="text-end fw-bold {% if bal >= 0 %}text-success{% else %}text-danger{% endif %}">
+            {{ bal|floatformat:2 }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Partners -->
+{% if partner_data %}
+<div class="card mb-4">
+  <div class="card-header"><i class="bi bi-people"></i> {% trans "Shareholders" %}
+    {% if request.user.can_edit %}
+    <a href="{% url 'projects:add_shareholder' project_pk=project.pk %}" class="btn btn-sm btn-light float-end">
+      <i class="bi bi-plus"></i>
+    </a>
+    {% endif %}
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead class="table-light"><tr>
+        <th>{% trans "Partner" %}</th>
+        <th class="text-end">{% trans "Ownership %" %}</th>
+        <th class="text-end">{% trans "Commitment" %}</th>
+        <th class="text-end">{% trans "Contributed" %}</th>
+        <th class="text-end">{% trans "Remaining" %}</th>
+      </tr></thead>
+      <tbody>
+        {% for pp, contributed, remaining in partner_data %}
+        <tr>
+          <td>{{ pp.partner.name }}</td>
+          <td class="text-end">{{ pp.ownership_percent }}%</td>
+          <td class="text-end">{{ pp.capital_commitment|floatformat:2 }}</td>
+          <td class="text-end text-success">{{ contributed|floatformat:2 }}</td>
+          <td class="text-end {% if remaining > 0 %}text-warning{% else %}text-success{% endif %}">
+            {{ remaining|floatformat:2 }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Transaction Types Grid -->
+{% if request.user.can_edit %}
+<div class="card mb-4">
+  <div class="card-header"><i class="bi bi-lightning-charge"></i> {% trans "Record Transaction" %}</div>
+  <div class="card-body">
+    <div class="row g-2">
+      <div class="col-md-3 col-6">
+        <a href="{% url 'projects:capital_contribution' project_pk=project.pk %}" class="text-decoration-none">
+          <div class="card tx-card text-center p-3 h-100">
+            <i class="bi bi-piggy-bank fs-3 text-success"></i>
+            <div class="small mt-1">{% trans "Capital Contribution" %}</div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-3 col-6">
+        <a href="{% url 'projects:shareholder_withdrawal' project_pk=project.pk %}" class="text-decoration-none">
+          <div class="card tx-card text-center p-3 h-100">
+            <i class="bi bi-cash-coin fs-3 text-warning"></i>
+            <div class="small mt-1">{% trans "Shareholder Withdrawal" %}</div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-3 col-6">
+        <a href="{% url 'projects:vendor_bill' project_pk=project.pk %}" class="text-decoration-none">
+          <div class="card tx-card text-center p-3 h-100">
+            <i class="bi bi-receipt fs-3 text-danger"></i>
+            <div class="small mt-1">{% trans "Vendor Bill" %}</div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-3 col-6">
+        <a href="{% url 'projects:vendor_advance' project_pk=project.pk %}" class="text-decoration-none">
+          <div class="card tx-card text-center p-3 h-100">
+            <i class="bi bi-arrow-up-right-circle fs-3 text-info"></i>
+            <div class="small mt-1">{% trans "Vendor Advance" %}</div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-3 col-6">
+        <a href="{% url 'projects:vendor_payment' project_pk=project.pk %}" class="text-decoration-none">
+          <div class="card tx-card text-center p-3 h-100">
+            <i class="bi bi-truck fs-3 text-primary"></i>
+            <div class="small mt-1">{% trans "Vendor Payment" %}</div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-3 col-6">
+        <a href="{% url 'projects:cash_expense' project_pk=project.pk %}" class="text-decoration-none">
+          <div class="card tx-card text-center p-3 h-100">
+            <i class="bi bi-wallet2 fs-3 text-danger"></i>
+            <div class="small mt-1">{% trans "Cash Expense" %}</div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-3 col-6">
+        <a href="{% url 'projects:cashbox_transfer' project_pk=project.pk %}" class="text-decoration-none">
+          <div class="card tx-card text-center p-3 h-100">
+            <i class="bi bi-arrow-left-right fs-3 text-secondary"></i>
+            <div class="small mt-1">{% trans "Cashbox Transfer" %}</div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-3 col-6">
+        <a href="{% url 'projects:bank_deposit' project_pk=project.pk %}" class="text-decoration-none">
+          <div class="card tx-card text-center p-3 h-100">
+            <i class="bi bi-bank fs-3 text-dark"></i>
+            <div class="small mt-1">{% trans "Bank Deposit" %}</div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-3 col-6">
+        <a href="{% url 'projects:project_income' project_pk=project.pk %}" class="text-decoration-none">
+          <div class="card tx-card text-center p-3 h-100">
+            <i class="bi bi-graph-up-arrow fs-3 text-success"></i>
+            <div class="small mt-1">{% trans "Project Income" %}</div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-3 col-6">
+        <a href="{% url 'projects:asset_purchase' project_pk=project.pk %}" class="text-decoration-none">
+          <div class="card tx-card text-center p-3 h-100">
+            <i class="bi bi-box-seam fs-3 text-primary"></i>
+            <div class="small mt-1">{% trans "Asset Purchase" %}</div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-3 col-6">
+        <a href="{% url 'projects:pay_salary' project_pk=project.pk %}" class="text-decoration-none">
+          <div class="card tx-card text-center p-3 h-100">
+            <i class="bi bi-person-badge fs-3 text-info"></i>
+            <div class="small mt-1">{% trans "Pay Salary" %}</div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-3 col-6">
+        <a href="{% url 'projects:manual_je' project_pk=project.pk %}" class="text-decoration-none">
+          <div class="card tx-card text-center p-3 h-100">
+            <i class="bi bi-pencil-square fs-3 text-secondary"></i>
+            <div class="small mt-1">{% trans "Manual Journal" %}</div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Recent Journal Entries -->
+{% if recent_entries %}
+<div class="card">
+  <div class="card-header d-flex justify-content-between">
+    <span><i class="bi bi-clock-history"></i> {% trans "Recent Transactions" %}</span>
+    <a href="{% url 'projects:journal' project_pk=project.pk %}" class="btn btn-sm btn-light">{% trans "View All" %}</a>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-light">
+        <tr><th>{% trans "Date" %}</th><th>{% trans "Type" %}</th><th>{% trans "Description" %}</th><th class="text-end">{% trans "Amount" %}</th></tr>
+      </thead>
+      <tbody>
+        {% for je in recent_entries %}
+        <tr>
+          <td>{{ je.date }}</td>
+          <td><span class="badge bg-secondary">{{ je.transaction_type }}</span></td>
+          <td>{{ je.description|truncatechars:40 }}</td>
+          <td class="text-end">{{ je.total_debit|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

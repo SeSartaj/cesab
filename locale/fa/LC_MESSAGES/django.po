@@ -1,0 +1,862 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: CESAB Finance 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-19 13:43+0430\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: fa\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+#: auth_users/apps.py:8 auth_users/models.py:17
+msgid "Users"
+msgstr "کاربران"
+
+#: auth_users/forms.py:8 auth_users/forms.py:9
+#: templates/auth_users/login.html:18
+msgid "Username"
+msgstr "نام کاربری"
+
+#: auth_users/forms.py:12 auth_users/forms.py:13
+#: templates/auth_users/login.html:22
+msgid "Password"
+msgstr "رمز عبور"
+
+#: auth_users/models.py:8
+msgid "Admin"
+msgstr ""
+
+#: auth_users/models.py:9
+msgid "Accountant"
+msgstr ""
+
+#: auth_users/models.py:10
+msgid "Viewer"
+msgstr ""
+
+#: auth_users/models.py:12
+msgid "Role"
+msgstr ""
+
+#: auth_users/models.py:13 cash/models.py:17 coa/models.py:27 core/models.py:10
+#: employees/models.py:26 partners/models.py:14 partners/models.py:47
+#: projects/models.py:13 templates/projects/project_list.html:24
+#: vendors/models.py:20
+msgid "Active"
+msgstr "فعال"
+
+#: auth_users/models.py:16
+msgid "User"
+msgstr ""
+
+#: auth_users/views.py:14 templates/auth_users/login.html:3
+#: templates/auth_users/login.html:26
+msgid "Login"
+msgstr "ورود"
+
+#: cash/apps.py:8
+msgid "Cash"
+msgstr ""
+
+#: cash/forms.py:11
+msgid "Cashbox Name"
+msgstr ""
+
+#: cash/forms.py:16 cash/models.py:15 core/models.py:13 journal/models.py:68
+#: templates/journal/je_detail.html:35 templates/projects/dashboard.html:72
+#: templates/transactions/manual_je.html:35 transactions/forms.py:25
+msgid "Currency"
+msgstr "ارز"
+
+#: cash/models.py:8 coa/models.py:17 employees/models.py:13
+#: journal/models.py:25 partners/models.py:29 projects/models.py:16
+#: vendors/models.py:8
+msgid "Project"
+msgstr ""
+
+#: cash/models.py:10 coa/models.py:23 core/models.py:7 employees/forms.py:14
+#: employees/models.py:15 partners/models.py:7
+#: templates/coa/account_list.html:21 templates/employees/employee_list.html:20
+#: templates/vendors/vendor_list.html:19 vendors/models.py:10
+msgid "Name"
+msgstr "نام"
+
+#: cash/models.py:12 coa/models.py:32 journal/models.py:63
+#: templates/journal/je_detail.html:30 templates/transactions/manual_je.html:32
+msgid "Account"
+msgstr "حساب"
+
+#: cash/models.py:20 templates/projects/dashboard.html:72
+#: transactions/forms.py:49 transactions/forms.py:72 transactions/forms.py:120
+#: transactions/forms.py:143 transactions/forms.py:166
+#: transactions/forms.py:208 transactions/forms.py:235
+#: transactions/forms.py:260
+msgid "Cashbox"
+msgstr "صندوق"
+
+#: cash/models.py:21 cash/views.py:26 templates/cash/cashbox_list.html:3
+#: templates/cash/cashbox_list.html:8 templates/projects/_sidebar.html:27
+#: templates/projects/dashboard.html:62
+msgid "Cashboxes"
+msgstr "صندوق‌ها"
+
+#: cash/views.py:35 employees/views.py:34 transactions/views.py:18
+#: vendors/views.py:34
+msgid "You do not have permission."
+msgstr "شما اجازه این کار را ندارید."
+
+#: cash/views.py:46
+msgid "Cashbox created."
+msgstr "صندوق ایجاد شد."
+
+#: cash/views.py:54 templates/cash/cashbox_list.html:11
+msgid "New Cashbox"
+msgstr "صندوق جدید"
+
+#: coa/apps.py:8 coa/views.py:30 templates/coa/account_list.html:3
+#: templates/coa/account_list.html:8 templates/projects/_sidebar.html:17
+msgid "Chart of Accounts"
+msgstr "نقشه حسابها"
+
+#: coa/models.py:8
+msgid "Asset"
+msgstr "دارایی"
+
+#: coa/models.py:9
+msgid "Liability"
+msgstr "بدهی"
+
+#: coa/models.py:10 coa/views.py:13
+msgid "Equity"
+msgstr "حقوق صاحبان سهام"
+
+#: coa/models.py:11 coa/views.py:14
+msgid "Income"
+msgstr "درآمد"
+
+#: coa/models.py:12
+msgid "Expense"
+msgstr ""
+
+#: coa/models.py:21
+msgid "Parent Account"
+msgstr ""
+
+#: coa/models.py:24 core/models.py:6 templates/coa/account_list.html:20
+msgid "Code"
+msgstr "کد"
+
+#: coa/models.py:25 templates/journal/je_detail.html:17
+#: templates/journal/je_list.html:24 templates/journal/je_list.html:47
+#: templates/projects/dashboard.html:244
+msgid "Type"
+msgstr "نوع"
+
+#: coa/models.py:33
+msgid "Accounts"
+msgstr ""
+
+#: coa/views.py:11
+msgid "Assets"
+msgstr "دارایی‌ها"
+
+#: coa/views.py:12
+msgid "Liabilities"
+msgstr "بدهی‌ها"
+
+#: coa/views.py:15
+msgid "Expenses"
+msgstr "هزینه‌ها"
+
+#: config/settings.py:96
+msgid "English"
+msgstr ""
+
+#: config/settings.py:97
+msgid "Persian"
+msgstr ""
+
+#: core/apps.py:8
+msgid "Core"
+msgstr ""
+
+#: core/models.py:8
+msgid "Symbol"
+msgstr ""
+
+#: core/models.py:9
+msgid "Decimal Places"
+msgstr ""
+
+#: core/models.py:14
+msgid "Currencies"
+msgstr ""
+
+#: employees/apps.py:8 employees/models.py:30 employees/views.py:26
+#: templates/employees/employee_list.html:3
+#: templates/employees/employee_list.html:8 templates/projects/_sidebar.html:37
+msgid "Employees"
+msgstr "کارمندان"
+
+#: employees/forms.py:8 employees/models.py:7
+msgid "Monthly"
+msgstr ""
+
+#: employees/forms.py:9 employees/models.py:8
+msgid "Daily"
+msgstr ""
+
+#: employees/forms.py:19 employees/models.py:16
+#: templates/employees/employee_list.html:21
+msgid "Salary Type"
+msgstr "نوع حقوق"
+
+#: employees/forms.py:24 employees/models.py:17
+#: templates/employees/employee_list.html:22
+msgid "Salary Amount"
+msgstr "مبلغ حقوق"
+
+#: employees/models.py:20 transactions/forms.py:90 transactions/forms.py:156
+msgid "Expense Account"
+msgstr "حساب هزینه"
+
+#: employees/models.py:24 vendors/models.py:14
+msgid "Payable Account"
+msgstr ""
+
+#: employees/models.py:29 transactions/forms.py:250
+msgid "Employee"
+msgstr "کارمند"
+
+#: employees/views.py:46
+msgid "Employee added."
+msgstr "کارمند اضافه شد."
+
+#: employees/views.py:54 templates/employees/employee_list.html:11
+msgid "Add Employee"
+msgstr "افزودن کارمند"
+
+#: journal/apps.py:8 templates/journal/je_list.html:3
+#: templates/projects/_sidebar.html:12
+msgid "Journal"
+msgstr "دفتر کل"
+
+#: journal/models.py:7 templates/projects/dashboard.html:137
+#: transactions/views.py:52
+msgid "Capital Contribution"
+msgstr "مشارکت سرمایه"
+
+#: journal/models.py:8 templates/projects/dashboard.html:145
+#: transactions/views.py:82
+msgid "Shareholder Withdrawal"
+msgstr "برداشت سهامدار"
+
+#: journal/models.py:9 templates/projects/dashboard.html:153
+#: transactions/views.py:112
+msgid "Vendor Bill"
+msgstr "فاکتور فروشنده"
+
+#: journal/models.py:10 transactions/views.py:142
+msgid "Vendor Advance Payment"
+msgstr "پیش‌پرداخت فروشنده"
+
+#: journal/models.py:11 transactions/views.py:172
+msgid "Vendor Payment Against Bill"
+msgstr "پرداخت در برابر فاکتور"
+
+#: journal/models.py:12 templates/projects/dashboard.html:177
+#: transactions/views.py:202
+msgid "Cash Expense"
+msgstr "هزینه نقدی"
+
+#: journal/models.py:13 templates/projects/dashboard.html:185
+#: transactions/views.py:232
+msgid "Cashbox Transfer"
+msgstr "انتقال صندوق"
+
+#: journal/models.py:14 transactions/views.py:262
+msgid "Bank Deposit / Cash Withdrawal"
+msgstr "سپرده بانکی / برداشت نقدی"
+
+#: journal/models.py:15 templates/projects/dashboard.html:201
+#: transactions/views.py:292
+msgid "Project Income"
+msgstr "درآمد پروژه"
+
+#: journal/models.py:16 templates/projects/dashboard.html:209
+#: transactions/views.py:322
+msgid "Asset Purchase"
+msgstr "خرید دارایی"
+
+#: journal/models.py:17 templates/projects/dashboard.html:217
+#: transactions/views.py:352
+msgid "Pay Salary"
+msgstr "پرداخت حقوق"
+
+#: journal/models.py:18 transactions/views.py:406
+msgid "Manual Journal Entry"
+msgstr "ثبت دستی"
+
+#: journal/models.py:27 templates/journal/je_detail.html:16
+#: templates/journal/je_list.html:46 templates/projects/dashboard.html:244
+#: templates/transactions/manual_je.html:19 transactions/forms.py:14
+#: transactions/forms.py:272
+msgid "Date"
+msgstr "تاریخ"
+
+#: journal/models.py:28 journal/models.py:73 projects/models.py:7
+#: templates/journal/je_detail.html:18 templates/journal/je_list.html:48
+#: templates/projects/dashboard.html:244
+#: templates/transactions/manual_je.html:23
+#: templates/transactions/manual_je.html:37 transactions/forms.py:19
+#: transactions/forms.py:276
+msgid "Description"
+msgstr "توضیحات"
+
+#: journal/models.py:31
+msgid "Transaction Type"
+msgstr ""
+
+#: journal/models.py:33
+msgid "Reference"
+msgstr "مرجع"
+
+#: journal/models.py:35 templates/journal/je_detail.html:19
+msgid "Created By"
+msgstr "ایجاد شده توسط"
+
+#: journal/models.py:40 journal/models.py:60 templates/journal/je_detail.html:3
+#: templates/journal/je_detail.html:8
+msgid "Journal Entry"
+msgstr "ثبت دفتر کل"
+
+#: journal/models.py:41 journal/views.py:32 templates/journal/je_list.html:8
+msgid "Journal Entries"
+msgstr "ثبت‌های دفتر کل"
+
+#: journal/models.py:65 templates/journal/je_detail.html:31
+#: templates/journal/je_list.html:50 templates/transactions/manual_je.html:33
+msgid "Debit"
+msgstr "بدهکار"
+
+#: journal/models.py:66 templates/journal/je_detail.html:32
+#: templates/journal/je_list.html:51 templates/transactions/manual_je.html:34
+msgid "Credit"
+msgstr "بستانکار"
+
+#: journal/models.py:70 transactions/forms.py:31
+msgid "Exchange Rate"
+msgstr "نرخ مبادله"
+
+#: journal/models.py:71
+msgid "Debit (TC)"
+msgstr ""
+
+#: journal/models.py:72
+msgid "Credit (TC)"
+msgstr ""
+
+#: journal/models.py:76
+msgid "Journal Line"
+msgstr ""
+
+#: journal/models.py:77
+msgid "Journal Lines"
+msgstr ""
+
+#: partners/apps.py:8 partners/models.py:19
+#: templates/projects/dashboard.html:52
+msgid "Partners"
+msgstr "شرکا"
+
+#: partners/forms.py:26 partners/models.py:18 partners/models.py:33
+#: templates/partners/shareholder_list.html:20
+#: templates/projects/dashboard.html:103 transactions/forms.py:39
+#: transactions/forms.py:62
+msgid "Partner"
+msgstr "شریک"
+
+#: partners/forms.py:31 partners/models.py:35
+msgid "Ownership %"
+msgstr "فیصدی شراکت"
+
+#: partners/forms.py:36 partners/models.py:36
+msgid "Capital Commitment"
+msgstr "تعهد سرمایه"
+
+#: partners/forms.py:40 partners/models.py:45
+msgid "Joined At"
+msgstr "تاریخ پیوستن"
+
+#: partners/models.py:8 templates/partners/shareholder_list.html:21
+msgid "Email"
+msgstr "ایمیل"
+
+#: partners/models.py:9 templates/vendors/vendor_list.html:19
+#: vendors/forms.py:14 vendors/models.py:11
+msgid "Phone"
+msgstr "شماره تلفن"
+
+#: partners/models.py:12
+msgid "System User"
+msgstr ""
+
+#: partners/models.py:39
+msgid "Capital Account"
+msgstr ""
+
+#: partners/models.py:43
+msgid "Current Account"
+msgstr ""
+
+#: partners/models.py:46
+msgid "Exited At"
+msgstr ""
+
+#: partners/models.py:51
+msgid "Project Partner"
+msgstr "شریک پروژه"
+
+#: partners/models.py:52
+msgid "Project Partners"
+msgstr "شرکاء پروژه"
+
+#: partners/views.py:26 templates/partners/shareholder_list.html:3
+#: templates/partners/shareholder_list.html:8
+#: templates/projects/_sidebar.html:22 templates/projects/dashboard.html:93
+msgid "Shareholders"
+msgstr "شرکاء"
+
+#: partners/views.py:34
+msgid "You do not have permission to perform this action."
+msgstr "شما اجازه انجام این عمل را ندارید."
+
+#: partners/views.py:47
+msgid "Partner added to project."
+msgstr "شریک به پروژه اضافه شد."
+
+#: partners/views.py:55 templates/partners/add_shareholder.html:3
+#: templates/partners/add_shareholder.html:10
+#: templates/partners/shareholder_list.html:11
+msgid "Add Shareholder"
+msgstr "افزودن سهامدار"
+
+#: partners/views.py:78
+msgid "New Partner"
+msgstr "شریک جدید"
+
+#: projects/apps.py:8 projects/models.py:17 templates/base.html:53
+#: templates/projects/project_list.html:3
+#: templates/projects/project_list.html:6
+msgid "Projects"
+msgstr "پروژه‌ها"
+
+#: projects/models.py:6
+msgid "Project Name"
+msgstr "نام پروژه"
+
+#: projects/models.py:9
+msgid "Base Currency"
+msgstr "ارز پروژه"
+
+#: projects/models.py:11
+msgid "Start Date"
+msgstr "تاریخ شروع"
+
+#: projects/views.py:40
+msgid "Project created successfully."
+msgstr "پروژه با موفقیت ایجاد شد."
+
+#: projects/views.py:45 templates/projects/project_list.html:9
+msgid "New Project"
+msgstr "پروژه جدید"
+
+#: projects/views.py:59
+msgid "Edit Project"
+msgstr ""
+
+#: templates/auth_users/login.html:10
+msgid "Construction Finance Management"
+msgstr "مدیریت مالی ساختمانی"
+
+#: templates/auth_users/login.html:13
+msgid "Invalid username or password."
+msgstr "نام کاربری یا رمز عبور نادرست است."
+
+#: templates/base.html:91
+msgid "Logout"
+msgstr "خروج"
+
+#: templates/cash/cashbox_form.html:21
+#: templates/employees/employee_form.html:21
+#: templates/partners/add_shareholder.html:22
+#: templates/projects/project_form.html:22
+#: templates/vendors/vendor_form.html:21
+msgid "Save"
+msgstr "ذخیره"
+
+#: templates/cash/cashbox_form.html:22
+#: templates/employees/employee_form.html:22
+#: templates/partners/add_shareholder.html:23
+#: templates/projects/project_form.html:23
+#: templates/transactions/manual_je.html:11
+#: templates/transactions/manual_je.html:92
+#: templates/transactions/tx_form.html:13
+#: templates/transactions/tx_form.html:39 templates/vendors/vendor_form.html:22
+msgid "Cancel"
+msgstr "لغو"
+
+#: templates/cash/cashbox_list.html:30
+msgid "No cashboxes yet."
+msgstr "هنوز صندوقی وجود ندارد."
+
+#: templates/coa/account_list.html:22 templates/projects/dashboard.html:72
+msgid "Balance"
+msgstr "موجودی"
+
+#: templates/employees/employee_list.html:33
+msgid "No employees yet."
+msgstr "هنوز کارمندی وجود ندارد."
+
+#: templates/journal/je_detail.html:10 templates/vendors/vendor_detail.html:10
+msgid "Back"
+msgstr "برگشت"
+
+#: templates/journal/je_detail.html:25
+msgid "Lines"
+msgstr "سطرها"
+
+#: templates/journal/je_detail.html:33
+msgid "Debit TC"
+msgstr "بدهکار (ارز معامله)"
+
+#: templates/journal/je_detail.html:34
+msgid "Credit TC"
+msgstr "بستانکار (ارز معامله)"
+
+#: templates/journal/je_detail.html:36
+msgid "Note"
+msgstr "یادداشت"
+
+#: templates/journal/je_detail.html:54 templates/transactions/manual_je.html:68
+msgid "Total"
+msgstr "جمع"
+
+#: templates/journal/je_list.html:16
+msgid "From"
+msgstr "از"
+
+#: templates/journal/je_list.html:20
+msgid "To"
+msgstr "تا"
+
+#: templates/journal/je_list.html:26
+msgid "All"
+msgstr "همه"
+
+#: templates/journal/je_list.html:34
+msgid "Filter"
+msgstr "فیلتر"
+
+#: templates/journal/je_list.html:49
+msgid "Ref"
+msgstr "مرجع"
+
+#: templates/journal/je_list.html:52
+msgid "By"
+msgstr "توسط"
+
+#: templates/journal/je_list.html:67
+msgid "No journal entries found."
+msgstr "ثبتی یافت نشد."
+
+#: templates/partners/shareholder_list.html:22
+#: templates/projects/dashboard.html:104
+#, python-format
+msgid "Ownership %%"
+msgstr ""
+
+#: templates/partners/shareholder_list.html:23
+#: templates/projects/dashboard.html:105
+msgid "Commitment"
+msgstr "تعهد سرمایه"
+
+#: templates/partners/shareholder_list.html:24
+#: templates/projects/dashboard.html:106
+msgid "Contributed"
+msgstr "مشارکت شده"
+
+#: templates/partners/shareholder_list.html:25
+#: templates/projects/dashboard.html:107
+msgid "Remaining"
+msgstr "باقیمانده"
+
+#: templates/partners/shareholder_list.html:26
+msgid "Joined"
+msgstr "تاریخ پیوستن"
+
+#: templates/partners/shareholder_list.html:43
+msgid "No shareholders yet."
+msgstr "هنوز سهامداری وجود ندارد."
+
+#: templates/projects/_sidebar.html:7
+msgid "Dashboard"
+msgstr "داشبورد"
+
+#: templates/projects/_sidebar.html:32 templates/vendors/vendor_list.html:3
+#: templates/vendors/vendor_list.html:8 vendors/apps.py:8 vendors/models.py:24
+#: vendors/views.py:26
+msgid "Vendors"
+msgstr "فروشندگان"
+
+#: templates/projects/_sidebar.html:42
+msgid "All Projects"
+msgstr "همه پروژه‌ها"
+
+#: templates/projects/dashboard.html:16
+msgid "Edit"
+msgstr "ویرایش"
+
+#: templates/projects/dashboard.html:26
+msgid "Total Income"
+msgstr "مجموع درآمد"
+
+#: templates/projects/dashboard.html:34
+msgid "Total Expense"
+msgstr "مجموع هزینه"
+
+#: templates/projects/dashboard.html:42
+msgid "Net Profit"
+msgstr "سود خالص"
+
+#: templates/projects/dashboard.html:130
+msgid "Record Transaction"
+msgstr "ثبت معامله"
+
+#: templates/projects/dashboard.html:161
+msgid "Vendor Advance"
+msgstr "پیش‌پرداخت فروشنده"
+
+#: templates/projects/dashboard.html:169
+msgid "Vendor Payment"
+msgstr "پرداخت فروشنده"
+
+#: templates/projects/dashboard.html:193
+msgid "Bank Deposit"
+msgstr "سپرده بانکی"
+
+#: templates/projects/dashboard.html:225
+msgid "Manual Journal"
+msgstr "دفتر دستی"
+
+#: templates/projects/dashboard.html:238
+msgid "Recent Transactions"
+msgstr "معاملات اخیر"
+
+#: templates/projects/dashboard.html:239
+msgid "View All"
+msgstr "مشاهده همه"
+
+#: templates/projects/dashboard.html:244 transactions/forms.py:44
+#: transactions/forms.py:67 transactions/forms.py:95 transactions/forms.py:115
+#: transactions/forms.py:138 transactions/forms.py:161
+#: transactions/forms.py:191 transactions/forms.py:213
+#: transactions/forms.py:230
+msgid "Amount"
+msgstr "مبلغ"
+
+#: templates/projects/project_list.html:24
+msgid "Inactive"
+msgstr "غیرفعال"
+
+#: templates/projects/project_list.html:31
+msgid "Open Dashboard"
+msgstr "باز کردن داشبورد"
+
+#: templates/projects/project_list.html:41
+msgid "No projects yet."
+msgstr "هنوز پروژه‌ای وجود ندارد."
+
+#: templates/projects/project_list.html:43
+msgid "Create First Project"
+msgstr "ایجاد اولین پروژه"
+
+#: templates/transactions/manual_je.html:24
+msgid "Journal entry description"
+msgstr "توضیحات ثبت"
+
+#: templates/transactions/manual_je.html:36
+msgid "Rate"
+msgstr "نرخ"
+
+#: templates/transactions/manual_je.html:55
+msgid "Base"
+msgstr "پایه"
+
+#: templates/transactions/manual_je.html:62
+msgid "note"
+msgstr "یادداشت"
+
+#: templates/transactions/manual_je.html:79
+msgid "Add Line"
+msgstr "افزودن سطر"
+
+#: templates/transactions/manual_je.html:84
+msgid "Entry is not balanced (Debit ≠ Credit)"
+msgstr "ثبت متعادل نیست "
+
+#: templates/transactions/manual_je.html:89
+msgid "Post Journal Entry"
+msgstr "ثبت کردن"
+
+#: templates/transactions/tx_form.html:30
+msgid "Multi-currency (optional)"
+msgstr "چند ارزه (اختیاری)"
+
+#: templates/transactions/tx_form.html:31
+msgid ""
+"Fill currency and exchange rate only if the transaction is in a foreign "
+"currency. Leave blank for base currency."
+msgstr ""
+
+#: templates/transactions/tx_form.html:36
+msgid "Record"
+msgstr "ثبت"
+
+#: templates/vendors/vendor_detail.html:17
+msgid "Payable Balance"
+msgstr "موجودی قابل پرداخت"
+
+#: templates/vendors/vendor_detail.html:27
+msgid "Advance Balance"
+msgstr "موجودی پیش‌پرداخت"
+
+#: templates/vendors/vendor_detail.html:36
+msgid "Record Bill"
+msgstr "ثبت فاکتور"
+
+#: templates/vendors/vendor_detail.html:39
+msgid "Advance Payment"
+msgstr "پیش‌پرداخت"
+
+#: templates/vendors/vendor_detail.html:42
+msgid "Payment Against Bill"
+msgstr "پرداخت در برابر فاکتور"
+
+#: templates/vendors/vendor_list.html:11 vendors/views.py:53
+msgid "New Vendor"
+msgstr "فروشنده جدید"
+
+#: templates/vendors/vendor_list.html:19
+msgid "Payable"
+msgstr "قابل پرداخت"
+
+#: templates/vendors/vendor_list.html:19
+msgid "Advance"
+msgstr "پیش‌پرداخت"
+
+#: templates/vendors/vendor_list.html:30
+msgid "No vendors yet."
+msgstr "هنوز فروشنده‌ای وجود ندارد."
+
+#: transactions/apps.py:8
+msgid "Transactions"
+msgstr ""
+
+#: transactions/forms.py:85 transactions/forms.py:110 transactions/forms.py:133
+#: vendors/models.py:23
+msgid "Vendor"
+msgstr "فروشنده"
+
+#: transactions/forms.py:181
+msgid "From Cashbox"
+msgstr "از صندوق"
+
+#: transactions/forms.py:186
+msgid "To Cashbox"
+msgstr "به صندوق"
+
+#: transactions/forms.py:225
+msgid "Asset Account"
+msgstr "حساب دارایی"
+
+#: transactions/forms.py:255
+msgid "Days / Months"
+msgstr "روز / ماه"
+
+#: transactions/views.py:45
+msgid "Capital contribution recorded."
+msgstr "مشارکت سرمایه ثبت شد."
+
+#: transactions/views.py:75
+msgid "Withdrawal recorded."
+msgstr "برداشت ثبت شد."
+
+#: transactions/views.py:105
+msgid "Vendor bill recorded."
+msgstr "فاکتور فروشنده ثبت شد."
+
+#: transactions/views.py:135
+msgid "Vendor advance payment recorded."
+msgstr "پیش‌پرداخت فروشنده ثبت شد."
+
+#: transactions/views.py:165
+msgid "Vendor payment recorded."
+msgstr "پرداخت فروشنده ثبت شد."
+
+#: transactions/views.py:195
+msgid "Cash expense recorded."
+msgstr "هزینه نقدی ثبت شد."
+
+#: transactions/views.py:225
+msgid "Cashbox transfer recorded."
+msgstr "انتقال صندوق ثبت شد."
+
+#: transactions/views.py:255
+msgid "Bank deposit / cash withdrawal recorded."
+msgstr "سپرده بانکی / برداشت نقدی ثبت شد."
+
+#: transactions/views.py:285
+msgid "Project income recorded."
+msgstr "درآمد پروژه ثبت شد."
+
+#: transactions/views.py:315
+msgid "Asset purchase recorded."
+msgstr "خرید دارایی ثبت شد."
+
+#: transactions/views.py:345
+msgid "Salary payment recorded."
+msgstr "پرداخت حقوق ثبت شد."
+
+#: transactions/views.py:396
+msgid "Journal entry is not balanced. Total debit must equal total credit."
+msgstr "ثبت متعادل نیست. مجموع بدهکار باید با بستانکار برابر باشد."
+
+#: transactions/views.py:398
+msgid "At least one line is required."
+msgstr "حداقل یک سطر لازم است."
+
+#: transactions/views.py:401
+msgid "Journal entry recorded."
+msgstr "ثبت دفتر کل ذخیره شد."
+
+#: vendors/forms.py:9
+msgid "Vendor Name"
+msgstr ""
+
+#: vendors/models.py:18
+msgid "Advance Account"
+msgstr ""
+
+#: vendors/views.py:45
+msgid "Vendor created."
+msgstr "فروشنده ایجاد شد."

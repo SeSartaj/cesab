@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ vendor.name }}{% endblock %}
+{% block sidebar %}{% include "projects/_sidebar.html" with active="vendors" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5><i class="bi bi-truck"></i> {{ vendor.name }}</h5>
+  <a href="{% url 'projects:vendors' project_pk=project.pk %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> {% trans "Back" %}
+  </a>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card text-center">
+      <div class="card-body">
+        <div class="text-muted small">{% trans "Payable Balance" %}</div>
+        <div class="fs-4 fw-bold {% if vendor.balance_payable > 0 %}text-danger{% else %}text-success{% endif %}">
+          {{ vendor.balance_payable|floatformat:2 }}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center">
+      <div class="card-body">
+        <div class="text-muted small">{% trans "Advance Balance" %}</div>
+        <div class="fs-4 fw-bold text-info">{{ vendor.advance_balance|floatformat:2 }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% if request.user.can_edit %}
+<div class="d-flex gap-2 mb-3">
+  <a href="{% url 'projects:vendor_bill' project_pk=project.pk %}" class="btn btn-outline-danger btn-sm">
+    <i class="bi bi-receipt"></i> {% trans "Record Bill" %}
+  </a>
+  <a href="{% url 'projects:vendor_advance' project_pk=project.pk %}" class="btn btn-outline-info btn-sm">
+    <i class="bi bi-arrow-up-right-circle"></i> {% trans "Advance Payment" %}
+  </a>
+  <a href="{% url 'projects:vendor_payment' project_pk=project.pk %}" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-cash"></i> {% trans "Payment Against Bill" %}
+  </a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,129 @@
+{% load i18n lang_utils %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}" {% if rtl %}dir="rtl"{% endif %}>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}CESAB{% endblock %} — CESAB Finance</title>
+<!-- Bootstrap 5 -->
+{% if rtl %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
+{% else %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+{% endif %}
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<style>
+  :root { --cesab-blue: #1a3f6f; --cesab-gold: #c8a04a; }
+  body { background: #f4f6f9; }
+  .navbar { background: var(--cesab-blue) !important; }
+  .navbar-brand, .navbar-nav .nav-link { color: #fff !important; }
+  .navbar-nav .nav-link:hover { color: var(--cesab-gold) !important; }
+  .sidebar { min-height: calc(100vh - 56px); background: #fff; border-end: 1px solid #dee2e6; }
+  .sidebar .nav-link { color: #495057; border-radius: 6px; }
+  .sidebar .nav-link:hover, .sidebar .nav-link.active { background: #e8f0fe; color: var(--cesab-blue); }
+  .sidebar .nav-link i { width: 20px; }
+  .card { box-shadow: 0 1px 4px rgba(0,0,0,.08); border: none; border-radius: 10px; }
+  .card-header { background: var(--cesab-blue); color: #fff; border-radius: 10px 10px 0 0 !important; }
+  .btn-primary { background: var(--cesab-blue); border-color: var(--cesab-blue); }
+  .btn-primary:hover { background: #15325a; }
+  .tx-card { cursor:pointer; transition: transform .15s; border: 2px solid transparent; }
+  .tx-card:hover { transform: translateY(-3px); border-color: var(--cesab-blue); }
+  .badge-role { font-size: .7rem; }
+  {% if rtl %}
+  body { font-family: 'Tahoma', 'Arial', sans-serif; }
+  {% endif %}
+</style>
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold" href="{% url 'projects:list' %}">
+      <i class="bi bi-buildings"></i> CESAB
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navMain">
+      {% if request.user.is_authenticated %}
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'projects:list' %}"><i class="bi bi-folder2-open"></i> {% trans "Projects" %}</a>
+        </li>
+      </ul>
+      <ul class="navbar-nav ms-auto align-items-center gap-2">
+        <!-- Language switcher -->
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+            <i class="bi bi-translate"></i> {{ LANGUAGE_CODE|upper }}
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+              <form action="{% url 'set_language' %}" method="post" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="language" value="en">
+                {% lang_url 'en' as en_url %}
+                <input type="hidden" name="next" value="{{ en_url }}">
+                <button type="submit" class="dropdown-item">🇺🇸 English</button>
+              </form>
+            </li>
+            <li>
+              <form action="{% url 'set_language' %}" method="post" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="language" value="fa">
+                {% lang_url 'fa' as fa_url %}
+                <input type="hidden" name="next" value="{{ fa_url }}">
+                <button type="submit" class="dropdown-item">دری </button>
+              </form>
+            </li>
+          </ul>
+        </li>
+        <li class="nav-item">
+          <span class="nav-link text-light opacity-75 small">
+            <i class="bi bi-person-circle"></i> {{ request.user.get_full_name|default:request.user.username }}
+            <span class="badge bg-warning text-dark badge-role ms-1">{{ request.user.role }}</span>
+          </span>
+        </li>
+        <li class="nav-item">
+          <form method="post" action="{% url 'auth_users:logout' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-light">
+              <i class="bi bi-box-arrow-right"></i> {% trans "Logout" %}
+            </button>
+          </form>
+        </li>
+      </ul>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
+<!-- MESSAGES -->
+{% if messages %}
+<div class="container-fluid px-4 pt-3">
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+    {{ msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% block body %}
+<div class="container-fluid">
+  <div class="row">
+    {% block sidebar %}{% endblock %}
+    <main class="{% block main_class %}col{% endblock %} px-4 py-3">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

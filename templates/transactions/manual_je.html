@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ title }}{% endblock %}
+{% block sidebar %}{% include "projects/_sidebar.html" with active="transactions" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-header d-flex justify-content-between">
+    <span><i class="bi bi-pencil-square"></i> {{ title }}</span>
+    <a href="{% url 'projects:dashboard' pk=project.pk %}" class="btn btn-sm btn-light">
+      <i class="bi bi-x"></i> {% trans "Cancel" %}
+    </a>
+  </div>
+  <div class="card-body">
+    <form method="post" id="manualJEForm">
+      {% csrf_token %}
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">{% trans "Date" %}</label>
+          <input type="date" name="date" class="form-control" required value="{{ today }}">
+        </div>
+        <div class="col-md-8">
+          <label class="form-label fw-semibold">{% trans "Description" %}</label>
+          <input type="text" name="description" class="form-control" required placeholder="{% trans 'Journal entry description' %}">
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-bordered align-middle" id="jeLines">
+          <thead class="table-light">
+            <tr>
+              <th>{% trans "Account" %}</th>
+              <th style="width:160px">{% trans "Debit" %}</th>
+              <th style="width:160px">{% trans "Credit" %}</th>
+              <th style="width:140px">{% trans "Currency" %}</th>
+              <th style="width:120px">{% trans "Rate" %}</th>
+              <th>{% trans "Description" %}</th>
+              <th style="width:40px"></th>
+            </tr>
+          </thead>
+          <tbody id="linesBody">
+            <tr class="je-line">
+              <td>
+                <select name="account_id" class="form-select form-select-sm">
+                  <option value="">---------</option>
+                  {% for acc in accounts %}
+                  <option value="{{ acc.pk }}">{{ acc.code }} - {{ acc.name }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td><input type="number" name="debit" class="form-control form-control-sm text-end debit-col" step="0.01" min="0" value="0" oninput="updateTotals()"></td>
+              <td><input type="number" name="credit" class="form-control form-control-sm text-end credit-col" step="0.01" min="0" value="0" oninput="updateTotals()"></td>
+              <td>
+                <select name="currency_id" class="form-select form-select-sm">
+                  <option value="">{% trans "Base" %} ({{ base_currency.code }})</option>
+                  {% for c in currencies %}
+                  <option value="{{ c.pk }}">{{ c.code }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td><input type="number" name="exchange_rate" class="form-control form-control-sm" step="0.000001" min="0" value="1"></td>
+              <td><input type="text" name="line_desc" class="form-control form-control-sm" placeholder="{% trans 'note' %}"></td>
+              <td><button type="button" class="btn btn-sm btn-outline-danger remove-line"><i class="bi bi-trash"></i></button></td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="fw-bold">
+              <td>{% trans "Total" %}</td>
+              <td class="text-end" id="totalDebit">0.00</td>
+              <td class="text-end" id="totalCredit">0.00</td>
+              <td colspan="4"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="d-flex gap-2 mb-3">
+        <button type="button" class="btn btn-outline-primary btn-sm" id="addLine">
+          <i class="bi bi-plus-circle"></i> {% trans "Add Line" %}
+        </button>
+      </div>
+
+      <div id="balanceAlert" class="alert alert-warning d-none">
+        {% trans "Entry is not balanced (Debit ≠ Credit)" %}
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary" id="submitBtn">
+          <i class="bi bi-check-circle"></i> {% trans "Post Journal Entry" %}
+        </button>
+        <a href="{% url 'projects:dashboard' pk=project.pk %}" class="btn btn-outline-secondary">
+          {% trans "Cancel" %}
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const lineTemplate = document.querySelector('.je-line').outerHTML;
+
+function updateTotals() {
+  let d = 0, c = 0;
+  document.querySelectorAll('.debit-col').forEach(el => d += parseFloat(el.value) || 0);
+  document.querySelectorAll('.credit-col').forEach(el => c += parseFloat(el.value) || 0);
+  document.getElementById('totalDebit').textContent = d.toFixed(2);
+  document.getElementById('totalCredit').textContent = c.toFixed(2);
+  const balanced = Math.abs(d - c) < 0.01;
+  document.getElementById('balanceAlert').classList.toggle('d-none', balanced || (d === 0 && c === 0));
+  document.getElementById('submitBtn').disabled = !balanced;
+}
+
+document.getElementById('addLine').addEventListener('click', () => {
+  const tbody = document.getElementById('linesBody');
+  tbody.insertAdjacentHTML('beforeend', lineTemplate);
+  tbody.lastElementChild.querySelectorAll('.debit-col, .credit-col').forEach(el => {
+    el.addEventListener('input', updateTotals);
+  });
+  tbody.lastElementChild.querySelector('.remove-line').addEventListener('click', function() {
+    this.closest('tr').remove(); updateTotals();
+  });
+});
+
+document.querySelectorAll('.remove-line').forEach(btn => {
+  btn.addEventListener('click', function() { this.closest('tr').remove(); updateTotals(); });
+});
+</script>
+{% endblock %}

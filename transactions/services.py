@@ -1,0 +1,254 @@
+"""
+Transaction services - business logic for all transaction types.
+All journal entries are created here.
+"""
+from decimal import Decimal
+from django.utils import timezone
+from journal.models import JournalEntry, JournalLine
+from coa.models import Account
+
+
+def _create_je(project, user, date, description, transaction_type, reference=""):
+    return JournalEntry.objects.create(
+        project=project,
+        date=date,
+        description=description,
+        transaction_type=transaction_type,
+        reference=reference,
+        created_by=user,
+    )
+
+
+def _check_cashbox_balance(cashbox, amount_bc):
+    """Raise ValueError if cashbox has insufficient balance (in base currency)."""
+    balance = cashbox.account.balance()
+    if Decimal(str(amount_bc)) > balance:
+        raise ValueError(
+            f"Insufficient balance in '{cashbox.name}'. "
+            f"Available: {balance:,.2f}, Required: {amount_bc:,.2f}."
+        )
+
+
+def _add_line(je, account, debit=0, credit=0, currency=None, exchange_rate=1):
+    if currency is None:
+        currency = je.project.base_currency
+    rate = Decimal(str(exchange_rate))
+    d = Decimal(str(debit))
+    c = Decimal(str(credit))
+    JournalLine.objects.create(
+        journal_entry=je,
+        account=account,
+        debit=d * rate if rate != 1 else d,
+        credit=c * rate if rate != 1 else c,
+        transaction_currency=currency,
+        exchange_rate=rate,
+        debit_tc=d,
+        credit_tc=c,
+    )
+
+
+def capital_contribution(project, user, date, project_partner, amount,
+                         cashbox, description="", currency=None, exchange_rate=1):
+    """
+    Partner contributes capital to the project.
+    Dr. Cashbox Account
+    Cr. Partner Capital Account
+    """
+    currency = currency or project.base_currency
+    je = _create_je(project, user, date, description or f"Capital contribution by {project_partner.partner.name}",
+                    "capital_contribution")
+    _add_line(je, cashbox.account, debit=amount, currency=currency, exchange_rate=exchange_rate)
+    _add_line(je, project_partner.capital_account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    return je
+
+
+def shareholder_withdrawal(project, user, date, project_partner, amount,
+                           cashbox, description="", currency=None, exchange_rate=1):
+    """
+    Partner withdraws from project.
+    Dr. Partner Current Account
+    Cr. Cashbox Account
+    """
+    currency = currency or project.base_currency
+    _check_cashbox_balance(cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
+    je = _create_je(project, user, date, description or f"Withdrawal by {project_partner.partner.name}",
+                    "shareholder_withdrawal")
+    _add_line(je, project_partner.current_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
+    _add_line(je, cashbox.account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    return je
+
+
+def vendor_bill(project, user, date, vendor, expense_account, amount,
+                description="", currency=None, exchange_rate=1):
+    """
+    Vendor bill / expense on credit.
+    Dr. Expense Account
+    Cr. Vendor Payable Account
+    """
+    currency = currency or project.base_currency
+    je = _create_je(project, user, date, description or f"Bill from {vendor.name}",
+                    "vendor_bill")
+    _add_line(je, expense_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
+    _add_line(je, vendor.payable_account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    return je
+
+
+def vendor_advance_payment(project, user, date, vendor, amount, cashbox,
+                           description="", currency=None, exchange_rate=1):
+    """
+    Advance payment to vendor.
+    Dr. Vendor Advance Account
+    Cr. Cashbox Account
+    """
+    currency = currency or project.base_currency
+    _check_cashbox_balance(cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
+    je = _create_je(project, user, date, description or f"Advance to {vendor.name}",
+                    "vendor_advance")
+    _add_line(je, vendor.advance_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
+    _add_line(je, cashbox.account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    return je
+
+
+def vendor_payment_against_bill(project, user, date, vendor, amount, cashbox,
+                                description="", currency=None, exchange_rate=1):
+    """
+    Payment against vendor bill.
+    Dr. Vendor Payable Account
+    Cr. Cashbox Account
+    """
+    currency = currency or project.base_currency
+    _check_cashbox_balance(cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
+    je = _create_je(project, user, date, description or f"Payment to {vendor.name}",
+                    "vendor_payment")
+    _add_line(je, vendor.payable_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
+    _add_line(je, cashbox.account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    return je
+
+
+def cash_expense(project, user, date, expense_account, amount, cashbox,
+                 description="", currency=None, exchange_rate=1):
+    """
+    Cash expense paid from cashbox.
+    Dr. Expense Account
+    Cr. Cashbox Account
+    """
+    currency = currency or project.base_currency
+    _check_cashbox_balance(cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
+    je = _create_je(project, user, date, description or "Cash expense",
+                    "cash_expense")
+    _add_line(je, expense_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
+    _add_line(je, cashbox.account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    return je
+
+
+def cashbox_transfer(project, user, date, from_cashbox, to_cashbox, amount,
+                     description="", currency=None, exchange_rate=1):
+    """
+    Transfer between cashboxes.
+    Dr. To Cashbox Account
+    Cr. From Cashbox Account
+    """
+    currency = currency or project.base_currency
+    _check_cashbox_balance(from_cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
+    je = _create_je(project, user, date,
+                    description or f"Transfer from {from_cashbox.name} to {to_cashbox.name}",
+                    "cashbox_transfer")
+    _add_line(je, to_cashbox.account, debit=amount, currency=currency, exchange_rate=exchange_rate)
+    _add_line(je, from_cashbox.account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    return je
+
+
+def bank_deposit(project, user, date, from_cashbox, to_cashbox, amount,
+                 description="", currency=None, exchange_rate=1):
+    """
+    Bank deposit or cash withdrawal (same as cashbox transfer).
+    Dr. To Account (bank or cash)
+    Cr. From Account
+    """
+    currency = currency or project.base_currency
+    _check_cashbox_balance(from_cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
+    je = _create_je(project, user, date,
+                    description or f"Deposit/Withdrawal",
+                    "bank_deposit")
+    _add_line(je, to_cashbox.account, debit=amount, currency=currency, exchange_rate=exchange_rate)
+    _add_line(je, from_cashbox.account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    return je
+
+
+def project_income(project, user, date, cashbox, amount, income_account=None,
+                   description="", currency=None, exchange_rate=1):
+    """
+    Project income / service revenue.
+    Dr. Cashbox Account
+    Cr. Revenue Account
+    """
+    currency = currency or project.base_currency
+    if income_account is None:
+        income_account = Account.objects.filter(project=project, code="4100").first()
+    je = _create_je(project, user, date, description or "Project income",
+                    "project_income")
+    _add_line(je, cashbox.account, debit=amount, currency=currency, exchange_rate=exchange_rate)
+    _add_line(je, income_account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    return je
+
+
+def asset_purchase(project, user, date, asset_account, amount, cashbox,
+                   description="", currency=None, exchange_rate=1):
+    """
+    Asset purchase (equipment, tools).
+    Dr. Asset Account
+    Cr. Cashbox Account
+    """
+    currency = currency or project.base_currency
+    _check_cashbox_balance(cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
+    je = _create_je(project, user, date, description or "Asset purchase",
+                    "asset_purchase")
+    _add_line(je, asset_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
+    _add_line(je, cashbox.account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    return je
+
+
+def pay_salary(project, user, date, employee, days_or_months, cashbox,
+               description="", currency=None, exchange_rate=1):
+    """
+    Pay employee salary.
+    Dr. Salary Expense Account
+    Cr. Cashbox Account (if paid directly)
+    """
+    currency = currency or project.base_currency
+    amount = employee.salary_amount * Decimal(str(days_or_months))
+    _check_cashbox_balance(cashbox, amount * Decimal(str(exchange_rate)))
+    je = _create_je(project, user, date,
+                    description or f"Salary for {employee.name}",
+                    "pay_salary")
+    _add_line(je, employee.expense_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
+    _add_line(je, cashbox.account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    return je
+
+
+def manual_journal_entry(project, user, date, description, lines):
+    """
+    Manual journal entry with multiple lines.
+    lines: list of dicts: {account_id, debit, credit, currency_id, exchange_rate}
+    """
+    je = _create_je(project, user, date, description, "manual")
+    for line in lines:
+        account = Account.objects.get(pk=line["account_id"])
+        currency_id = line.get("currency_id")
+        if currency_id:
+            from core.models import Currency
+            currency = Currency.objects.get(pk=currency_id)
+        else:
+            currency = project.base_currency
+        JournalLine.objects.create(
+            journal_entry=je,
+            account=account,
+            debit=Decimal(str(line.get("debit", 0))),
+            credit=Decimal(str(line.get("credit", 0))),
+            transaction_currency=currency,
+            exchange_rate=Decimal(str(line.get("exchange_rate", 1))),
+            debit_tc=Decimal(str(line.get("debit_tc", line.get("debit", 0)))),
+            credit_tc=Decimal(str(line.get("credit_tc", line.get("credit", 0)))),
+            description=line.get("description", ""),
+        )
+    return je
