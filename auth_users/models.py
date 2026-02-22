@@ -4,12 +4,6 @@ from django.utils.translation import gettext_lazy as _
 
 
 class User(AbstractUser):
-    ROLE_CHOICES = [
-        ("admin", _("Admin")),
-        ("accountant", _("Accountant")),
-        ("viewer", _("Viewer")),
-    ]
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="viewer", verbose_name=_("Role"))
     is_active = models.BooleanField(default=True, verbose_name=_("Active"))
 
     class Meta:
@@ -21,10 +15,10 @@ class User(AbstractUser):
 
     @property
     def can_edit(self):
-        """Check if user can perform write operations via model permissions."""
+        """True for superusers and members of the Accountant group."""
         return (
             self.is_superuser
-            or self.has_perm("journal.add_journalentry")
+            or self.groups.filter(name="Accountant").exists()
         )
 
     @property

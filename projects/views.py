@@ -5,9 +5,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy, reverse
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
+from django.db.models import Q
 from decimal import Decimal
 
-from .models import Project
+from .models import Project, ProjectMember
 from .services import create_project
 from .forms import ProjectForm
 from partners.models import ProjectPartner
@@ -16,18 +17,40 @@ from journal.models import JournalEntry
 from coa.models import Account
 
 
+def _accessible_projects(user):
+    """Return projects visible to this user.
+    - Superusers see all projects.
+    - Accountant-group users see projects they are a ProjectMember of.
+    - Partner users see projects where their Partner.user == them.
+    """
+    if user.is_superuser:
+        return Project.objects.filter(is_active=True)
+    qs = Project.objects.filter(is_active=True)
+    member_pks = ProjectMember.objects.filter(user=user).values_list("project_id", flat=True)
+    partner_pks = ProjectPartner.objects.filter(
+        partner__user=user, is_active=True
+    ).values_list("project_id", flat=True)
+    return qs.filter(Q(pk__in=member_pks) | Q(pk__in=partner_pks)).distinct()
+
+
 class ProjectListView(LoginRequiredMixin, ListView):
     model = Project
     template_name = "projects/project_list.html"
     context_object_name = "projects"
 
     def get_queryset(self):
-        return Project.objects.filter(is_active=True)
+        return _accessible_projects(self.request.user)
 
 
 class ProjectCreateView(LoginRequiredMixin, CreateView):
     form_class = ProjectForm
     template_name = "projects/project_form.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_superuser:
+            messages.error(request, _("Only superusers can create projects."))
+            return redirect("projects:list")
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         data = form.cleaned_data
@@ -64,6 +87,16 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
 @login_required
 def project_dashboard(request, pk):
     project = get_object_or_404(Project, pk=pk)
+
+    # Access check: superuser, project member, or partner user
+    if not request.user.is_superuser:
+        is_member = ProjectMember.objects.filter(project=project, user=request.user).exists()
+        is_partner = ProjectPartner.objects.filter(
+            project=project, partner__user=request.user, is_active=True
+        ).exists()
+        if not (is_member or is_partner):
+            messages.error(request, _("You do not have access to this project."))
+            return redirect("projects:list")
 
     # Partner summary - return as tuples (pp, contributed, remaining, percent_done)
     partners = project.project_partners.filter(is_active=True).select_related(

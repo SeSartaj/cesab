@@ -92,7 +92,9 @@
         <li class="nav-item">
           <span class="nav-link text-light opacity-75 small">
             <i class="bi bi-person-circle"></i> {{ request.user.get_full_name|default:request.user.username }}
-            <span class="badge bg-warning text-dark badge-role ms-1">{{ request.user.role }}</span>
+            {% for g in request.user.groups.all %}
+            <span class="badge bg-warning text-dark badge-role ms-1">{{ g.name }}</span>
+            {% endfor %}
           </span>
         </li>
         <li class="nav-item">
