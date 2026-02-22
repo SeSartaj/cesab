@@ -9,12 +9,20 @@ TRANSACTION_TYPES = [
     ("vendor_bill", _("Vendor Bill")),
     ("vendor_advance", _("Vendor Advance Payment")),
     ("vendor_payment", _("Vendor Payment Against Bill")),
+    ("vendor_advance_settlement", _("Vendor Advance Settlement")),
+    ("vendor_direct_payment", _("Vendor Direct Payment")),
+    ("vendor_refund", _("Vendor Refund")),
     ("cash_expense", _("Cash Expense")),
     ("cashbox_transfer", _("Cashbox Transfer")),
     ("bank_deposit", _("Bank Deposit / Cash Withdrawal")),
     ("project_income", _("Project Income")),
     ("asset_purchase", _("Asset Purchase")),
     ("pay_salary", _("Pay Salary")),
+    ("inventory_purchase", _("Inventory Purchase")),
+    ("inventory_consumption", _("Inventory Consumption")),
+    ("inventory_adjustment", _("Inventory Adjustment")),
+    ("partner_inventory_contribution", _("Partner Inventory Contribution")),
+    ("correction", _("Correction Entry")),
     ("manual", _("Manual Journal Entry")),
 ]
 
@@ -31,6 +39,11 @@ class JournalEntry(models.Model):
         verbose_name=_("Transaction Type")
     )
     reference = models.CharField(max_length=100, blank=True, verbose_name=_("Reference"))
+    corrects = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="corrections", verbose_name=_("Corrects Entry"),
+        help_text=_("If this is a correction entry, reference the original entry here."),
+    )
     created_by = models.ForeignKey(
         "auth_users.User", on_delete=models.PROTECT, verbose_name=_("Created By")
     )

@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'vendors',
     'employees',
     'transactions',
+    'inventory',
 ]
 
 MIDDLEWARE = [
@@ -95,6 +96,7 @@ USE_TZ = True
 LANGUAGES = [
     ('en', _('English')),
     ('fa', _('Persian')),
+    ('ps', _('Pashto')),
 ]
 
 LOCALE_PATHS = [BASE_DIR / 'locale']

@@ -49,8 +49,10 @@
   <div class="col-md-3">
     <div class="card text-center">
       <div class="card-body py-3">
-        <div class="text-muted small">{% trans "Partners" %}</div>
-        <div class="fs-5 fw-bold text-primary">{{ partner_data|length }}</div>
+        <div class="text-muted small">{% trans "Total Payables" %}</div>
+        <div class="fs-5 fw-bold {% if total_payables > 0 %}text-warning{% else %}text-success{% endif %}">
+          {{ total_payables|floatformat:2 }}
+        </div>
       </div>
     </div>
   </div>
@@ -87,16 +89,22 @@
 </div>
 {% endif %}
 
-<!-- Partners -->
-{% if partner_data %}
-<div class="card mb-4">
-  <div class="card-header"><i class="bi bi-people"></i> {% trans "Shareholders" %}
+<!-- Partners / Shareholders -->
+<div class="card mb-4" id="shareholders">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-people"></i> {% trans "Shareholders" %}</span>
     {% if request.user.can_edit %}
-    <a href="{% url 'projects:add_shareholder' project_pk=project.pk %}" class="btn btn-sm btn-light float-end">
-      <i class="bi bi-plus"></i>
-    </a>
+    <div class="d-flex gap-1">
+      <a href="{% url 'projects:add_new_partner_to_project' project_pk=project.pk %}" class="btn btn-sm btn-light" title="{% trans 'Add New Partner' %}">
+        <i class="bi bi-person-plus"></i> {% trans "New Partner" %}
+      </a>
+      <a href="{% url 'projects:add_shareholder' project_pk=project.pk %}" class="btn btn-sm btn-light" title="{% trans 'Add Existing Partner' %}">
+        <i class="bi bi-plus"></i>
+      </a>
+    </div>
     {% endif %}
   </div>
+  {% if partner_data %}
   <div class="card-body p-0">
     <table class="table table-sm mb-0">
       <thead class="table-light"><tr>
@@ -105,9 +113,10 @@
         <th class="text-end">{% trans "Commitment" %}</th>
         <th class="text-end">{% trans "Contributed" %}</th>
         <th class="text-end">{% trans "Remaining" %}</th>
+        <!-- <th>{% trans "Progress" %}</th> -->
       </tr></thead>
       <tbody>
-        {% for pp, contributed, remaining in partner_data %}
+        {% for pp, contributed, remaining, percent_done in partner_data %}
         <tr>
           <td>{{ pp.partner.name }}</td>
           <td class="text-end">{{ pp.ownership_percent }}%</td>
@@ -116,13 +125,34 @@
           <td class="text-end {% if remaining > 0 %}text-warning{% else %}text-success{% endif %}">
             {{ remaining|floatformat:2 }}
           </td>
+          <td style="min-width:120px;">
+            <div class="progress" style="height:10px;" title="{{ percent_done }}%">
+              <div class="progress-bar {% if percent_done >= 100 %}bg-success{% elif percent_done >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                   role="progressbar"
+                   style="width: {{ percent_done }}%"
+                   aria-valuenow="{{ percent_done }}"
+                   aria-valuemin="0" aria-valuemax="100">
+              </div>
+            </div>
+            <div class="text-muted small text-end">{{ percent_done }}%</div>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+  {% else %}
+  <div class="card-body text-center text-muted py-3">
+    <i class="bi bi-people fs-3 d-block mb-2"></i>
+    {% trans "No shareholders yet." %}
+    {% if request.user.can_edit %}
+    <br><a href="{% url 'projects:add_new_partner_to_project' project_pk=project.pk %}" class="btn btn-sm btn-primary mt-2">
+      <i class="bi bi-person-plus"></i> {% trans "Add Partner" %}
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
 </div>
-{% endif %}
 
 <!-- Transaction Types Grid -->
 {% if request.user.can_edit %}
@@ -167,6 +197,30 @@
           <div class="card tx-card text-center p-3 h-100">
             <i class="bi bi-truck fs-3 text-primary"></i>
             <div class="small mt-1">{% trans "Vendor Payment" %}</div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-3 col-6">
+        <a href="{% url 'projects:vendor_advance_settlement' project_pk=project.pk %}" class="text-decoration-none">
+          <div class="card tx-card text-center p-3 h-100">
+            <i class="bi bi-check2-circle fs-3 text-success"></i>
+            <div class="small mt-1">{% trans "Advance Settlement" %}</div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-3 col-6">
+        <a href="{% url 'projects:vendor_direct_payment' project_pk=project.pk %}" class="text-decoration-none">
+          <div class="card tx-card text-center p-3 h-100">
+            <i class="bi bi-send fs-3 text-dark"></i>
+            <div class="small mt-1">{% trans "Direct Payment" %}</div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-3 col-6">
+        <a href="{% url 'projects:vendor_refund' project_pk=project.pk %}" class="text-decoration-none">
+          <div class="card tx-card text-center p-3 h-100">
+            <i class="bi bi-arrow-return-left fs-3 text-secondary"></i>
+            <div class="small mt-1">{% trans "Vendor Refund" %}</div>
           </div>
         </a>
       </div>
@@ -219,6 +273,14 @@
         </a>
       </div>
       <div class="col-md-3 col-6">
+        <a href="{% url 'projects:inventory' project_pk=project.pk %}" class="text-decoration-none">
+          <div class="card tx-card text-center p-3 h-100">
+            <i class="bi bi-boxes fs-3 text-warning"></i>
+            <div class="small mt-1">{% trans "Inventory" %}</div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-3 col-6">
         <a href="{% url 'projects:manual_je' project_pk=project.pk %}" class="text-decoration-none">
           <div class="card tx-card text-center p-3 h-100">
             <i class="bi bi-pencil-square fs-3 text-secondary"></i>
@@ -241,15 +303,20 @@
   <div class="card-body p-0">
     <table class="table table-sm table-hover mb-0">
       <thead class="table-light">
-        <tr><th>{% trans "Date" %}</th><th>{% trans "Type" %}</th><th>{% trans "Description" %}</th><th class="text-end">{% trans "Amount" %}</th></tr>
+        <tr><th>{% trans "Date" %}</th><th>{% trans "Type" %}</th><th>{% trans "Description" %}</th><th class="text-end">{% trans "Amount" %}</th><th></th></tr>
       </thead>
       <tbody>
         {% for je in recent_entries %}
         <tr>
           <td>{{ je.date }}</td>
-          <td><span class="badge bg-secondary">{{ je.transaction_type }}</span></td>
+          <td><span class="badge bg-secondary">{{ je.get_transaction_type_display }}</span></td>
           <td>{{ je.description|truncatechars:40 }}</td>
           <td class="text-end">{{ je.total_debit|floatformat:2 }}</td>
+          <td>
+            <a href="{% url 'projects:je_detail' project_pk=project.pk pk=je.pk %}" class="btn btn-sm btn-outline-secondary py-0 px-1">
+              <i class="bi bi-eye"></i>
+            </a>
+          </td>
         </tr>
         {% endfor %}
       </tbody>

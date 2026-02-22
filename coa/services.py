@@ -7,7 +7,8 @@ STANDARD_COA = [
     {"code": "1200", "name": "Accounts Receivable", "type": "asset", "parent_code": "1000"},
     {"code": "1300", "name": "Vendor Advances", "type": "asset", "parent_code": "1000"},
     {"code": "1400", "name": "Fixed Assets", "type": "asset", "parent_code": "1000"},
-    {"code": "1500", "name": "Other Assets", "type": "asset", "parent_code": "1000"},
+    {"code": "1500", "name": "Inventory", "type": "asset", "parent_code": "1000"},
+    {"code": "1600", "name": "Other Assets", "type": "asset", "parent_code": "1000"},
     {"code": "2000", "name": "Liabilities", "type": "liability", "parent_code": None},
     {"code": "2100", "name": "Accounts Payable", "type": "liability", "parent_code": "2000"},
     {"code": "2200", "name": "Salaries Payable", "type": "liability", "parent_code": "2000"},
@@ -23,6 +24,7 @@ STANDARD_COA = [
     {"code": "5200", "name": "Salaries & Wages", "type": "expense", "parent_code": "5000"},
     {"code": "5300", "name": "General & Administrative", "type": "expense", "parent_code": "5000"},
     {"code": "5400", "name": "Asset Expenses", "type": "expense", "parent_code": "5000"},
+    {"code": "5500", "name": "Inventory Expense", "type": "expense", "parent_code": "5000"},
 ]
 
 
@@ -142,3 +144,28 @@ def create_cashbox_account(project, cashbox):
         is_system=True,
     )
     return account
+
+
+def create_inventory_accounts(project, item_name):
+    """Create inventory asset and expense accounts for a new inventory item."""
+    idx = project.inventory_items.count() + 1
+    inv_code = _next_code(project, "15", idx)
+    exp_code = _next_code(project, "55", idx)
+
+    inventory_account = Account.objects.create(
+        project=project,
+        code=inv_code,
+        name=f"{item_name} — Inventory",
+        account_type="asset",
+        parent=Account.objects.filter(project=project, code="1500").first(),
+        is_system=True,
+    )
+    expense_account = Account.objects.create(
+        project=project,
+        code=exp_code,
+        name=f"{item_name} — Expense",
+        account_type="expense",
+        parent=Account.objects.filter(project=project, code="5500").first(),
+        is_system=True,
+    )
+    return inventory_account, expense_account

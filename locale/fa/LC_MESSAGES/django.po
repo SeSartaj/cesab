@@ -65,11 +65,11 @@ msgstr "ورود"
 
 #: cash/apps.py:8
 msgid "Cash"
-msgstr ""
+msgstr "نقد"
 
 #: cash/forms.py:11
 msgid "Cashbox Name"
-msgstr ""
+msgstr "نام دخل"
 
 #: cash/forms.py:16 cash/models.py:15 core/models.py:13 journal/models.py:68
 #: templates/journal/je_detail.html:35 templates/projects/dashboard.html:72
@@ -81,7 +81,7 @@ msgstr "ارز"
 #: journal/models.py:25 partners/models.py:29 projects/models.py:16
 #: vendors/models.py:8
 msgid "Project"
-msgstr ""
+msgstr "پروژه"
 
 #: cash/models.py:10 coa/models.py:23 core/models.py:7 employees/forms.py:14
 #: employees/models.py:15 partners/models.py:7
@@ -101,13 +101,13 @@ msgstr "حساب"
 #: transactions/forms.py:208 transactions/forms.py:235
 #: transactions/forms.py:260
 msgid "Cashbox"
-msgstr "صندوق"
+msgstr "دخل"
 
 #: cash/models.py:21 cash/views.py:26 templates/cash/cashbox_list.html:3
 #: templates/cash/cashbox_list.html:8 templates/projects/_sidebar.html:27
 #: templates/projects/dashboard.html:62
 msgid "Cashboxes"
-msgstr "صندوق‌ها"
+msgstr "دخل ها"
 
 #: cash/views.py:35 employees/views.py:34 transactions/views.py:18
 #: vendors/views.py:34
@@ -116,16 +116,16 @@ msgstr "شما اجازه این کار را ندارید."
 
 #: cash/views.py:46
 msgid "Cashbox created."
-msgstr "صندوق ایجاد شد."
+msgstr "دخل ایجاد شد."
 
 #: cash/views.py:54 templates/cash/cashbox_list.html:11
 msgid "New Cashbox"
-msgstr "صندوق جدید"
+msgstr "دخل جدید"
 
 #: coa/apps.py:8 coa/views.py:30 templates/coa/account_list.html:3
 #: templates/coa/account_list.html:8 templates/projects/_sidebar.html:17
 msgid "Chart of Accounts"
-msgstr "نقشه حسابها"
+msgstr "چارت حسابها"
 
 #: coa/models.py:8
 msgid "Asset"
@@ -137,7 +137,7 @@ msgstr "بدهی"
 
 #: coa/models.py:10 coa/views.py:13
 msgid "Equity"
-msgstr "حقوق صاحبان سهام"
+msgstr "حصه شرکاء"
 
 #: coa/models.py:11 coa/views.py:14
 msgid "Income"
@@ -145,11 +145,11 @@ msgstr "درآمد"
 
 #: coa/models.py:12
 msgid "Expense"
-msgstr ""
+msgstr "مصرف"
 
 #: coa/models.py:21
 msgid "Parent Account"
-msgstr ""
+msgstr "حساب بالا"
 
 #: coa/models.py:24 core/models.py:6 templates/coa/account_list.html:20
 msgid "Code"
@@ -163,7 +163,7 @@ msgstr "نوع"
 
 #: coa/models.py:33
 msgid "Accounts"
-msgstr ""
+msgstr "حساب ها"
 
 #: coa/views.py:11
 msgid "Assets"
@@ -179,11 +179,11 @@ msgstr "هزینه‌ها"
 
 #: config/settings.py:96
 msgid "English"
-msgstr ""
+msgstr "انگلیسی"
 
 #: config/settings.py:97
 msgid "Persian"
-msgstr ""
+msgstr "دری/فارسی"
 
 #: core/apps.py:8
 msgid "Core"
@@ -199,7 +199,7 @@ msgstr ""
 
 #: core/models.py:14
 msgid "Currencies"
-msgstr ""
+msgstr "اسعار"
 
 #: employees/apps.py:8 employees/models.py:30 employees/views.py:26
 #: templates/employees/employee_list.html:3
@@ -209,21 +209,21 @@ msgstr "کارمندان"
 
 #: employees/forms.py:8 employees/models.py:7
 msgid "Monthly"
-msgstr ""
+msgstr "ماهانه"
 
 #: employees/forms.py:9 employees/models.py:8
 msgid "Daily"
-msgstr ""
+msgstr "روزانه"
 
 #: employees/forms.py:19 employees/models.py:16
 #: templates/employees/employee_list.html:21
 msgid "Salary Type"
-msgstr "نوع حقوق"
+msgstr "نوع معاش"
 
 #: employees/forms.py:24 employees/models.py:17
 #: templates/employees/employee_list.html:22
 msgid "Salary Amount"
-msgstr "مبلغ حقوق"
+msgstr "مبلغ معاش"
 
 #: employees/models.py:20 transactions/forms.py:90 transactions/forms.py:156
 msgid "Expense Account"
@@ -248,7 +248,7 @@ msgstr "افزودن کارمند"
 #: journal/apps.py:8 templates/journal/je_list.html:3
 #: templates/projects/_sidebar.html:12
 msgid "Journal"
-msgstr "دفتر کل"
+msgstr "کتاب محاسبات"
 
 #: journal/models.py:7 templates/projects/dashboard.html:137
 #: transactions/views.py:52
@@ -258,12 +258,12 @@ msgstr "مشارکت سرمایه"
 #: journal/models.py:8 templates/projects/dashboard.html:145
 #: transactions/views.py:82
 msgid "Shareholder Withdrawal"
-msgstr "برداشت سهامدار"
+msgstr "برداشت شریک"
 
 #: journal/models.py:9 templates/projects/dashboard.html:153
 #: transactions/views.py:112
 msgid "Vendor Bill"
-msgstr "فاکتور فروشنده"
+msgstr "بل فروشنده"
 
 #: journal/models.py:10 transactions/views.py:142
 msgid "Vendor Advance Payment"
@@ -271,7 +271,7 @@ msgstr "پیش‌پرداخت فروشنده"
 
 #: journal/models.py:11 transactions/views.py:172
 msgid "Vendor Payment Against Bill"
-msgstr "پرداخت در برابر فاکتور"
+msgstr "پرداخت در مقابل بل"
 
 #: journal/models.py:12 templates/projects/dashboard.html:177
 #: transactions/views.py:202
@@ -281,7 +281,7 @@ msgstr "هزینه نقدی"
 #: journal/models.py:13 templates/projects/dashboard.html:185
 #: transactions/views.py:232
 msgid "Cashbox Transfer"
-msgstr "انتقال صندوق"
+msgstr "انتقال دخل"
 
 #: journal/models.py:14 transactions/views.py:262
 msgid "Bank Deposit / Cash Withdrawal"
@@ -300,7 +300,7 @@ msgstr "خرید دارایی"
 #: journal/models.py:17 templates/projects/dashboard.html:217
 #: transactions/views.py:352
 msgid "Pay Salary"
-msgstr "پرداخت حقوق"
+msgstr "پرداخت معاش"
 
 #: journal/models.py:18 transactions/views.py:406
 msgid "Manual Journal Entry"

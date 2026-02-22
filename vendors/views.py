@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
 
 from projects.models import Project
+from journal.models import JournalEntry
 from .models import Vendor
 from .forms import VendorForm
 from .services import create_vendor
@@ -43,7 +44,7 @@ def add_vendor(request, project_pk):
                 phone=form.cleaned_data.get("phone", ""),
             )
             messages.success(request, _("Vendor created."))
-            return redirect(reverse("projects:dashboard", kwargs={"pk": project_pk}))
+            return redirect(reverse("projects:vendors", kwargs={"project_pk": project_pk}))
     else:
         form = VendorForm()
 
@@ -62,4 +63,19 @@ class VendorDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["project"] = self.object.project
+        # Filter journal entries related to this vendor via description or reference
+        # Use vendor account lines to get related JEs
+        from coa.models import Account
+        vendor_accounts = Account.objects.filter(
+            project=self.object.project,
+            name__icontains=self.object.name,
+        ).values_list("id", flat=True)
+        from journal.models import JournalLine
+        je_ids = JournalLine.objects.filter(
+            account_id__in=vendor_accounts
+        ).values_list("journal_entry_id", flat=True).distinct()
+        ctx["vendor_entries"] = JournalEntry.objects.filter(
+            project=self.object.project,
+            id__in=je_ids,
+        ).order_by("-date", "-id")[:50]
         return ctx

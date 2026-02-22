@@ -1,0 +1,1233 @@
+# CESAB Finance - Pashto Translation
+# Copyright (C) 2024
+# This file is distributed under the same license as the CESAB Finance package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: CESAB Finance 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-22 09:04+0430\n"
+"PO-Revision-Date: 2026-02-22 09:04+0430\n"
+"Last-Translator: CESAB Finance\n"
+"Language-Team: Pashto\n"
+"Language: ps\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: auth_users/apps.py:8 auth_users/models.py:17
+msgid "Users"
+msgstr "کاروونکي"
+
+#: auth_users/forms.py:8 auth_users/forms.py:9
+#: templates/auth_users/login.html:18
+msgid "Username"
+msgstr "د کاروونکي نوم"
+
+#: auth_users/forms.py:12 auth_users/forms.py:13
+#: templates/auth_users/login.html:22
+msgid "Password"
+msgstr "پټنوم"
+
+#: auth_users/models.py:8
+msgid "Admin"
+msgstr "مدیر"
+
+#: auth_users/models.py:9
+msgid "Accountant"
+msgstr "محاسب"
+
+#: auth_users/models.py:10
+msgid "Viewer"
+msgstr "لیدونکی"
+
+#: auth_users/models.py:12
+msgid "Role"
+msgstr "رول"
+
+#: auth_users/models.py:13 cash/models.py:17 coa/models.py:27 core/models.py:10
+#: employees/models.py:26 inventory/models.py:31 partners/models.py:14
+#: partners/models.py:47 projects/models.py:13
+#: templates/projects/project_list.html:24 vendors/models.py:20
+msgid "Active"
+msgstr "فعال"
+
+#: auth_users/models.py:16
+msgid "User"
+msgstr "کاروونکی"
+
+#: auth_users/views.py:14 templates/auth_users/login.html:3
+#: templates/auth_users/login.html:26
+msgid "Login"
+msgstr "ننوتل"
+
+#: cash/apps.py:8
+msgid "Cash"
+msgstr "نغده"
+
+#: cash/forms.py:11
+msgid "Cashbox Name"
+msgstr "د صندوق نوم"
+
+#: cash/forms.py:16 cash/models.py:15 core/models.py:13 inventory/forms.py:63
+#: inventory/forms.py:200 journal/models.py:81
+#: templates/journal/je_detail.html:69 templates/projects/dashboard.html:74
+#: templates/transactions/manual_je.html:35 transactions/forms.py:32
+msgid "Currency"
+msgstr "اسعار"
+
+#: cash/models.py:8 coa/models.py:17 employees/models.py:13
+#: inventory/models.py:11 inventory/models.py:66 journal/models.py:33
+#: partners/models.py:29 projects/models.py:16 vendors/models.py:8
+msgid "Project"
+msgstr "پروژه"
+
+#: cash/models.py:10 coa/models.py:23 core/models.py:7 employees/forms.py:14
+#: employees/models.py:15 partners/models.py:7
+#: templates/coa/account_list.html:21 templates/employees/employee_list.html:20
+#: templates/vendors/vendor_list.html:19 vendors/models.py:10
+msgid "Name"
+msgstr "نوم"
+
+#: cash/models.py:12 coa/models.py:32 journal/models.py:76
+#: templates/journal/create_correction.html:31
+#: templates/journal/je_detail.html:64 templates/transactions/manual_je.html:32
+msgid "Account"
+msgstr "حساب"
+
+#: cash/models.py:20 templates/projects/dashboard.html:74
+#: transactions/forms.py:56 transactions/forms.py:79 transactions/forms.py:127
+#: transactions/forms.py:150 transactions/forms.py:173
+#: transactions/forms.py:215 transactions/forms.py:242
+#: transactions/forms.py:267
+msgid "Cashbox"
+msgstr "صندوق"
+
+#: cash/models.py:21 cash/views.py:26 templates/cash/cashbox_list.html:3
+#: templates/cash/cashbox_list.html:8 templates/projects/_sidebar.html:27
+#: templates/projects/dashboard.html:64
+msgid "Cashboxes"
+msgstr "صندوقونه"
+
+#: cash/views.py:35 employees/views.py:34 transactions/views.py:19
+#: vendors/views.py:35
+msgid "You do not have permission."
+msgstr "تاسو اجازه نلرئ."
+
+#: cash/views.py:46
+msgid "Cashbox created."
+msgstr "صندوق جوړ شو."
+
+#: cash/views.py:54 templates/cash/cashbox_list.html:11
+msgid "New Cashbox"
+msgstr "نوی صندوق"
+
+#: coa/apps.py:8 coa/views.py:30 templates/coa/account_list.html:3
+#: templates/coa/account_list.html:8 templates/projects/_sidebar.html:17
+msgid "Chart of Accounts"
+msgstr "د حسابونو لیست"
+
+#: coa/models.py:8
+msgid "Asset"
+msgstr "شتمني"
+
+#: coa/models.py:9
+msgid "Liability"
+msgstr "پور"
+
+#: coa/models.py:10 coa/views.py:13
+msgid "Equity"
+msgstr "د ملکیت حق"
+
+#: coa/models.py:11 coa/views.py:14
+msgid "Income"
+msgstr "عاید"
+
+#: coa/models.py:12
+msgid "Expense"
+msgstr "لګښت"
+
+#: coa/models.py:21
+msgid "Parent Account"
+msgstr "اصلي حساب"
+
+#: coa/models.py:24 core/models.py:6 templates/coa/account_list.html:20
+msgid "Code"
+msgstr "کوډ"
+
+#: coa/models.py:25 templates/journal/je_detail.html:51
+#: templates/journal/je_list.html:24 templates/journal/je_list.html:47
+#: templates/projects/dashboard.html:306
+#: templates/vendors/vendor_detail.html:65
+msgid "Type"
+msgstr "ډول"
+
+#: coa/models.py:33
+msgid "Accounts"
+msgstr "حسابونه"
+
+#: coa/views.py:11
+msgid "Assets"
+msgstr "شتمنۍ"
+
+#: coa/views.py:12
+msgid "Liabilities"
+msgstr "پورونه"
+
+#: coa/views.py:15
+msgid "Expenses"
+msgstr "لګښتونه"
+
+#: config/settings.py:97
+msgid "English"
+msgstr "انګلیسي"
+
+#: config/settings.py:98
+msgid "Persian"
+msgstr "فارسي"
+
+#: config/settings.py:99
+msgid "Pashto"
+msgstr "پښتو"
+
+#: core/apps.py:8
+msgid "Core"
+msgstr "اساسي"
+
+#: core/models.py:8
+msgid "Symbol"
+msgstr "سمبول"
+
+#: core/models.py:9
+msgid "Decimal Places"
+msgstr "لسیزه ځایونه"
+
+#: core/models.py:14
+msgid "Currencies"
+msgstr "اسعار"
+
+#: employees/apps.py:8 employees/models.py:30 employees/views.py:26
+#: templates/employees/employee_list.html:3
+#: templates/employees/employee_list.html:8 templates/projects/_sidebar.html:37
+msgid "Employees"
+msgstr "کارمندان"
+
+#: employees/forms.py:8 employees/models.py:7
+msgid "Monthly"
+msgstr "میاشتني"
+
+#: employees/forms.py:9 employees/models.py:8
+msgid "Daily"
+msgstr "ورځني"
+
+#: employees/forms.py:19 employees/models.py:16
+#: templates/employees/employee_list.html:21
+msgid "Salary Type"
+msgstr "د معاش ډول"
+
+#: employees/forms.py:24 employees/models.py:17
+#: templates/employees/employee_list.html:22
+msgid "Salary Amount"
+msgstr "د معاش مقدار"
+
+#: employees/models.py:20 inventory/models.py:29
+#: templates/inventory/item_list.html:72 transactions/forms.py:97
+#: transactions/forms.py:163 transactions/forms.py:315
+msgid "Expense Account"
+msgstr "د لګښت حساب"
+
+#: employees/models.py:24 vendors/models.py:14
+msgid "Payable Account"
+msgstr "د ورکولو حساب"
+
+#: employees/models.py:29 transactions/forms.py:257
+msgid "Employee"
+msgstr "کارمند"
+
+#: employees/views.py:46
+msgid "Employee added."
+msgstr "کارمند اضافه شو."
+
+#: employees/views.py:54 templates/employees/employee_list.html:11
+msgid "Add Employee"
+msgstr "کارمند اضافه کړئ"
+
+#: inventory/apps.py:8 inventory/views.py:28
+#: templates/inventory/item_list.html:3 templates/inventory/item_list.html:9
+#: templates/projects/_sidebar.html:42 templates/projects/dashboard.html:279
+msgid "Inventory"
+msgstr "ګودام"
+
+#: inventory/forms.py:14 inventory/models.py:13
+msgid "Item Name"
+msgstr "د توکي نوم"
+
+#: inventory/forms.py:19 inventory/models.py:16
+#: templates/inventory/item_list.html:69
+msgid "Unit"
+msgstr "واحد"
+
+#: inventory/forms.py:27 inventory/forms.py:82 inventory/forms.py:128
+#: inventory/forms.py:164 inventory/models.py:72
+#: templates/inventory/item_list.html:68
+msgid "Item"
+msgstr "توکی"
+
+#: inventory/forms.py:31 inventory/forms.py:86 inventory/forms.py:132
+#: inventory/forms.py:173 journal/models.py:35
+#: templates/journal/je_detail.html:50 templates/journal/je_list.html:46
+#: templates/projects/dashboard.html:306
+#: templates/transactions/manual_je.html:19
+#: templates/vendors/vendor_detail.html:64 transactions/forms.py:15
+#: transactions/forms.py:279
+msgid "Date"
+msgstr "نیټه"
+
+#: inventory/forms.py:36 inventory/forms.py:91 inventory/forms.py:142
+#: inventory/forms.py:178 inventory/models.py:82
+msgid "Quantity"
+msgstr "مقدار"
+
+#: inventory/forms.py:41 inventory/forms.py:147 inventory/forms.py:183
+#: inventory/models.py:87
+msgid "Unit Cost"
+msgstr "د واحد قیمت"
+
+#: inventory/forms.py:46 transactions/forms.py:325
+msgid "Paid From"
+msgstr "له"
+
+#: inventory/forms.py:51 inventory/forms.py:101 inventory/forms.py:152
+#: inventory/forms.py:188 journal/models.py:36 journal/models.py:86
+#: projects/models.py:7 templates/journal/je_detail.html:52
+#: templates/journal/je_list.html:48 templates/projects/dashboard.html:306
+#: templates/transactions/manual_je.html:23
+#: templates/transactions/manual_je.html:37
+#: templates/vendors/vendor_detail.html:66 transactions/forms.py:20
+#: transactions/forms.py:283
+msgid "Description"
+msgstr "تفصیل"
+
+#: inventory/forms.py:56 inventory/forms.py:193 projects/models.py:9
+#: transactions/forms.py:25
+msgid "Base Currency"
+msgstr "اساسي اسعار"
+
+#: inventory/forms.py:69 inventory/forms.py:206 journal/models.py:83
+#: transactions/forms.py:38
+msgid "Exchange Rate"
+msgstr "د تبادلې نرخ"
+
+#: inventory/forms.py:96
+msgid "Unit Cost (per unit)"
+msgstr "د واحد قیمت (هر واحد)"
+
+#: inventory/forms.py:114
+#, python-format
+msgid "Quantity exceeds available stock (%(qty)s %(unit)s)."
+msgstr "مقدار د موجود ذخیرې څخه زیات دی (%(qty)s %(unit)s)."
+
+#: inventory/forms.py:123
+msgid "Increase"
+msgstr "زیاتول"
+
+#: inventory/forms.py:123
+msgid "Decrease"
+msgstr "کمول"
+
+#: inventory/forms.py:137
+msgid "Direction"
+msgstr "لوری"
+
+#: inventory/forms.py:169 partners/forms.py:26 partners/models.py:18
+#: partners/models.py:33 templates/partners/shareholder_list.html:20
+#: templates/projects/dashboard.html:111 transactions/forms.py:46
+#: transactions/forms.py:69
+msgid "Partner"
+msgstr "ملګری"
+
+#: inventory/models.py:17
+msgid "e.g. kg, bag, ton, liter, box"
+msgstr "لکه: کیلوګرام، بوري، تن، لیتر، صندوق"
+
+#: inventory/models.py:23 templates/inventory/item_list.html:71
+msgid "Inventory Account"
+msgstr "د ګودام حساب"
+
+#: inventory/models.py:35
+msgid "Inventory Item"
+msgstr "د ګودام توکی"
+
+#: inventory/models.py:36
+msgid "Inventory Items"
+msgstr "د ګودام توکي"
+
+#: inventory/models.py:56 templates/inventory/item_list.html:27
+msgid "Purchase"
+msgstr "اخیستل"
+
+#: inventory/models.py:57 templates/inventory/item_list.html:35
+msgid "Consumption"
+msgstr "مصرف"
+
+#: inventory/models.py:58 templates/inventory/item_list.html:43
+msgid "Adjustment"
+msgstr "تعدیل"
+
+#: inventory/models.py:59 templates/inventory/item_list.html:51
+msgid "Partner Contribution"
+msgstr "د ملګري مرسته"
+
+#: inventory/models.py:77
+msgid "Movement Type"
+msgstr "د حرکت ډول"
+
+#: inventory/models.py:92
+msgid "Total Cost"
+msgstr "ټول قیمت"
+
+#: inventory/models.py:99 partners/models.py:51
+msgid "Project Partner"
+msgstr "د پروژې ملګری"
+
+#: inventory/models.py:100
+msgid "Required only for partner contribution"
+msgstr "یوازې د ملګري مرستې لپاره اړین دی"
+
+#: inventory/models.py:106 journal/models.py:53 journal/models.py:73
+#: templates/journal/je_detail.html:3 templates/journal/je_detail.html:8
+msgid "Journal Entry"
+msgstr "دفتري ثبت"
+
+#: inventory/models.py:111 journal/models.py:48
+#: templates/journal/je_detail.html:53
+msgid "Created By"
+msgstr "جوړونکی"
+
+#: inventory/models.py:116
+msgid "Inventory Movement"
+msgstr "د ګودام حرکت"
+
+#: inventory/models.py:117
+msgid "Inventory Movements"
+msgstr "د ګودام حرکتونه"
+
+#: inventory/views.py:16 journal/views.py:60 partners/views.py:35
+#: partners/views.py:65
+msgid "You do not have permission to perform this action."
+msgstr "تاسو د دې کار اجازه نلرئ."
+
+#: inventory/views.py:47
+msgid "Inventory item created."
+msgstr "د ګودام توکی جوړ شو."
+
+#: inventory/views.py:55
+msgid "New Inventory Item"
+msgstr "نوی د ګودام توکی"
+
+#: inventory/views.py:81
+msgid "Inventory purchase recorded."
+msgstr "د ګودام اخیستل ثبت شول."
+
+#: inventory/views.py:91 journal/models.py:21
+msgid "Inventory Purchase"
+msgstr "د ګودام اخیستل"
+
+#: inventory/views.py:113
+msgid "Inventory consumption recorded."
+msgstr "د ګودام مصرف ثبت شو."
+
+#: inventory/views.py:121 journal/models.py:22
+msgid "Inventory Consumption"
+msgstr "د ګودام مصرف"
+
+#: inventory/views.py:144
+msgid "Inventory adjustment recorded."
+msgstr "د ګودام تعدیل ثبت شو."
+
+#: inventory/views.py:154 journal/models.py:23
+msgid "Inventory Adjustment"
+msgstr "د ګودام تعدیل"
+
+#: inventory/views.py:181
+msgid "Partner inventory contribution recorded."
+msgstr "د ملګري د ګودام مرسته ثبت شوه."
+
+#: inventory/views.py:191 journal/models.py:24
+msgid "Partner Inventory Contribution"
+msgstr "د ملګري د ګودام مرسته"
+
+#: journal/apps.py:8 templates/journal/je_list.html:3
+#: templates/projects/_sidebar.html:12
+msgid "Journal"
+msgstr "دفتر"
+
+#: journal/models.py:7 templates/projects/dashboard.html:167
+#: transactions/views.py:56
+msgid "Capital Contribution"
+msgstr "د سرمایې مرسته"
+
+#: journal/models.py:8 templates/projects/dashboard.html:175
+#: transactions/views.py:92
+msgid "Shareholder Withdrawal"
+msgstr "د ملګري وتل"
+
+#: journal/models.py:9 templates/projects/dashboard.html:183
+#: transactions/views.py:134
+msgid "Vendor Bill"
+msgstr "د پلورونکي بل"
+
+#: journal/models.py:10 transactions/views.py:170
+msgid "Vendor Advance Payment"
+msgstr "د پلورونکي مخکنۍ تادیه"
+
+#: journal/models.py:11 transactions/views.py:206
+msgid "Vendor Payment Against Bill"
+msgstr "د بل پر وړاندې تادیه"
+
+#: journal/models.py:12 transactions/views.py:501
+msgid "Vendor Advance Settlement"
+msgstr "د پلورونکي مخکنۍ تادیې تصفیه"
+
+#: journal/models.py:13 transactions/views.py:546
+msgid "Vendor Direct Payment"
+msgstr "د پلورونکي مستقیم تادیه"
+
+#: journal/models.py:14 templates/projects/dashboard.html:223
+#: templates/vendors/vendor_detail.html:51 transactions/views.py:587
+msgid "Vendor Refund"
+msgstr "د پلورونکي بیرته ورکول"
+
+#: journal/models.py:15 templates/projects/dashboard.html:231
+#: transactions/views.py:239
+msgid "Cash Expense"
+msgstr "نغد لګښت"
+
+#: journal/models.py:16 templates/projects/dashboard.html:239
+#: transactions/views.py:272
+msgid "Cashbox Transfer"
+msgstr "د صندوق لیږد"
+
+#: journal/models.py:17 transactions/views.py:305
+msgid "Bank Deposit / Cash Withdrawal"
+msgstr "د بانک جمع / نغد وتل"
+
+#: journal/models.py:18 templates/projects/dashboard.html:255
+#: transactions/views.py:335
+msgid "Project Income"
+msgstr "د پروژې عاید"
+
+#: journal/models.py:19 templates/projects/dashboard.html:263
+#: transactions/views.py:368
+msgid "Asset Purchase"
+msgstr "د شتمنۍ اخیستل"
+
+#: journal/models.py:20 templates/projects/dashboard.html:271
+#: transactions/views.py:401
+msgid "Pay Salary"
+msgstr "معاش ورکول"
+
+#: journal/models.py:25
+msgid "Correction Entry"
+msgstr "د سمون ثبت"
+
+#: journal/models.py:26 transactions/views.py:455
+msgid "Manual Journal Entry"
+msgstr "لاسي دفتري ثبت"
+
+#: journal/models.py:39
+msgid "Transaction Type"
+msgstr "د معاملې ډول"
+
+#: journal/models.py:41
+msgid "Reference"
+msgstr "حواله"
+
+#: journal/models.py:44
+msgid "Corrects Entry"
+msgstr "سموي ثبت"
+
+#: journal/models.py:45
+msgid "If this is a correction entry, reference the original entry here."
+msgstr "که دا د سمون ثبت وي، دلته اصلي ثبت حواله کړئ."
+
+#: journal/models.py:54 journal/views.py:36 templates/journal/je_list.html:8
+msgid "Journal Entries"
+msgstr "دفتري ثبتونه"
+
+#: journal/models.py:78 templates/journal/create_correction.html:32
+#: templates/journal/je_detail.html:65 templates/journal/je_list.html:50
+#: templates/transactions/manual_je.html:33
+msgid "Debit"
+msgstr "بدهکار"
+
+#: journal/models.py:79 templates/journal/create_correction.html:33
+#: templates/journal/je_detail.html:66 templates/journal/je_list.html:51
+#: templates/transactions/manual_je.html:34
+msgid "Credit"
+msgstr "بستانکار"
+
+#: journal/models.py:84
+msgid "Debit (TC)"
+msgstr "بدهکار (د معاملې اسعار)"
+
+#: journal/models.py:85
+msgid "Credit (TC)"
+msgstr "بستانکار (د معاملې اسعار)"
+
+#: journal/models.py:89
+msgid "Journal Line"
+msgstr "دفتري کرښه"
+
+#: journal/models.py:90
+msgid "Journal Lines"
+msgstr "دفتري کرښې"
+
+#: journal/views.py:72
+#, python-format
+msgid "Correction entry JE-%(pk)04d created successfully."
+msgstr "د سمون ثبت JE-%(pk)04d بریالۍ جوړ شو."
+
+#: journal/views.py:79 templates/journal/create_correction.html:58
+msgid "Create Correction Entry"
+msgstr "د سمون ثبت جوړول"
+
+#: partners/apps.py:8 partners/models.py:19
+msgid "Partners"
+msgstr "ملګري"
+
+#: partners/forms.py:31 partners/forms.py:66 partners/models.py:35
+msgid "Ownership %"
+msgstr "د ملکیت سلنه"
+
+#: partners/forms.py:36 partners/forms.py:71 partners/models.py:36
+msgid "Capital Commitment"
+msgstr "د سرمایې ژمنه"
+
+#: partners/forms.py:40 partners/forms.py:75 partners/models.py:45
+msgid "Joined At"
+msgstr "د یوځای کیدو نیټه"
+
+#: partners/forms.py:50
+msgid "Partner Name"
+msgstr "د ملګري نوم"
+
+#: partners/forms.py:55 partners/models.py:8
+#: templates/partners/shareholder_list.html:21
+msgid "Email"
+msgstr "بریښنالیک"
+
+#: partners/forms.py:60 partners/models.py:9
+#: templates/vendors/vendor_list.html:19 vendors/forms.py:14
+#: vendors/models.py:11
+msgid "Phone"
+msgstr "تلیفون"
+
+#: partners/models.py:12
+msgid "System User"
+msgstr "د سیستم کاروونکی"
+
+#: partners/models.py:39
+msgid "Capital Account"
+msgstr "د سرمایې حساب"
+
+#: partners/models.py:43
+msgid "Current Account"
+msgstr "جاري حساب"
+
+#: partners/models.py:46
+msgid "Exited At"
+msgstr "د وتلو نیټه"
+
+#: partners/models.py:52
+msgid "Project Partners"
+msgstr "د پروژې ملګري"
+
+#: partners/views.py:27 templates/partners/shareholder_list.html:3
+#: templates/partners/shareholder_list.html:8
+#: templates/projects/_sidebar.html:22 templates/projects/dashboard.html:95
+msgid "Shareholders"
+msgstr "ملګري"
+
+#: partners/views.py:48
+msgid "Partner added to project."
+msgstr "ملګری پروژې ته اضافه شو."
+
+#: partners/views.py:56 templates/partners/add_shareholder.html:3
+#: templates/partners/add_shareholder.html:10
+#: templates/partners/shareholder_list.html:11
+msgid "Add Shareholder"
+msgstr "ملګری اضافه کړئ"
+
+#: partners/views.py:81
+#, python-format
+msgid "Partner %(name)s added to project."
+msgstr "ملګری %(name)s پروژې ته اضافه شو."
+
+#: partners/views.py:89
+msgid "Add New Partner to Project"
+msgstr "پروژې ته نوی ملګری اضافه کړئ"
+
+#: partners/views.py:112 templates/projects/dashboard.html:99
+msgid "New Partner"
+msgstr "نوی ملګری"
+
+#: projects/apps.py:8 projects/models.py:17 templates/base.html:53
+#: templates/projects/project_list.html:3
+#: templates/projects/project_list.html:6
+msgid "Projects"
+msgstr "پروژې"
+
+#: projects/models.py:6
+msgid "Project Name"
+msgstr "د پروژې نوم"
+
+#: projects/models.py:11
+msgid "Start Date"
+msgstr "د پیل نیټه"
+
+#: projects/views.py:40
+msgid "Project created successfully."
+msgstr "پروژه بریالۍ جوړه شوه."
+
+#: projects/views.py:45 templates/projects/project_list.html:9
+msgid "New Project"
+msgstr "نوې پروژه"
+
+#: projects/views.py:59
+msgid "Edit Project"
+msgstr "پروژه سمول"
+
+#: templates/auth_users/login.html:10
+msgid "Construction Finance Management"
+msgstr "د جوړونې مالي مدیریت"
+
+#: templates/auth_users/login.html:13
+msgid "Invalid username or password."
+msgstr "د کاروونکي نوم یا پټنوم سم نه دی."
+
+#: templates/base.html:102
+msgid "Logout"
+msgstr "وتل"
+
+#: templates/cash/cashbox_form.html:21
+#: templates/employees/employee_form.html:21
+#: templates/inventory/item_form.html:30
+#: templates/partners/add_shareholder.html:22
+#: templates/projects/project_form.html:22
+#: templates/vendors/vendor_form.html:21
+msgid "Save"
+msgstr "خوندي کول"
+
+#: templates/cash/cashbox_form.html:22
+#: templates/employees/employee_form.html:22
+#: templates/inventory/item_form.html:14 templates/inventory/item_form.html:33
+#: templates/inventory/movement_form.html:14
+#: templates/inventory/movement_form.html:54
+#: templates/journal/create_correction.html:61
+#: templates/partners/add_new_partner.html:14
+#: templates/partners/add_new_partner.html:58
+#: templates/partners/add_shareholder.html:23
+#: templates/projects/project_form.html:23
+#: templates/transactions/manual_je.html:11
+#: templates/transactions/manual_je.html:92
+#: templates/transactions/tx_form.html:13
+#: templates/transactions/tx_form.html:52 templates/vendors/vendor_form.html:22
+msgid "Cancel"
+msgstr "لغو"
+
+#: templates/cash/cashbox_list.html:30
+msgid "No cashboxes yet."
+msgstr "لا هیڅ صندوق نشته."
+
+#: templates/coa/account_list.html:22 templates/projects/dashboard.html:74
+msgid "Balance"
+msgstr "پاتې"
+
+#: templates/employees/employee_list.html:33
+msgid "No employees yet."
+msgstr "لا هیڅ کارمند نشته."
+
+#: templates/inventory/item_list.html:12
+msgid "New Item"
+msgstr "نوی توکی"
+
+#: templates/inventory/item_list.html:20
+msgid "Record Movement"
+msgstr "حرکت ثبت کړئ"
+
+#: templates/inventory/item_list.html:63
+msgid "Items"
+msgstr "توکي"
+
+#: templates/inventory/item_list.html:70
+msgid "Qty on Hand"
+msgstr "موجود مقدار"
+
+#: templates/inventory/item_list.html:95
+msgid "No inventory items yet."
+msgstr "لا هیڅ توکی نشته."
+
+#: templates/inventory/item_list.html:98
+msgid "Add First Item"
+msgstr "لومړی توکی اضافه کړئ"
+
+#: templates/inventory/movement_form.html:31
+msgid "Uncheck to enter a foreign currency amount."
+msgstr "د بهرني اسعارو مقدار داخلولو لپاره غیر چیک کړئ."
+
+#: templates/inventory/movement_form.html:51
+#: templates/transactions/tx_form.html:49
+msgid "Record"
+msgstr "ثبت"
+
+#: templates/journal/create_correction.html:16
+msgid "Important"
+msgstr "مهم"
+
+#: templates/journal/create_correction.html:18
+msgid ""
+"Journal entries cannot be deleted. A correction entry will create a counter-"
+"balancing entry that reverses all the debits and credits of the original "
+"entry."
+msgstr ""
+"دفتري ثبتونه نشي حذف کیدای. د سمون ثبت یو توازن ثبت جوړوي "
+"چې د اصلي ثبت ټول بدهکار او بستانکار بدلوي."
+
+#: templates/journal/create_correction.html:25
+msgid "Original Entry"
+msgstr "اصلي ثبت"
+
+#: templates/journal/create_correction.html:52
+msgid "Correction Note"
+msgstr "د سمون یادښت"
+
+#: templates/journal/create_correction.html:52
+msgid "optional"
+msgstr "اختیاري"
+
+#: templates/journal/create_correction.html:54
+msgid "Explain the reason for this correction..."
+msgstr "د دې سمون دلیل تشریح کړئ..."
+
+#: templates/journal/je_detail.html:13
+msgid "Create a counter-balancing correction entry. Entries cannot be deleted."
+msgstr "یو توازن سمون ثبت جوړول. ثبتونه نشي حذف کیدای."
+
+#: templates/journal/je_detail.html:14
+msgid "Create Correction"
+msgstr "سمون جوړول"
+
+#: templates/journal/je_detail.html:18 templates/vendors/vendor_detail.html:10
+msgid "Back"
+msgstr "شاته"
+
+#: templates/journal/je_detail.html:27
+msgid "This is a correction entry for"
+msgstr "دا د سمون ثبت دی د"
+
+#: templates/journal/je_detail.html:39
+msgid "Correction entries:"
+msgstr "د سمون ثبتونه:"
+
+#: templates/journal/je_detail.html:59
+msgid "Lines"
+msgstr "کرښې"
+
+#: templates/journal/je_detail.html:67
+msgid "Debit TC"
+msgstr "بدهکار (اسعار)"
+
+#: templates/journal/je_detail.html:68
+msgid "Credit TC"
+msgstr "بستانکار (اسعار)"
+
+#: templates/journal/je_detail.html:70
+msgid "Note"
+msgstr "یادښت"
+
+#: templates/journal/je_detail.html:88 templates/transactions/manual_je.html:68
+msgid "Total"
+msgstr "ټول"
+
+#: templates/journal/je_list.html:16
+msgid "From"
+msgstr "له"
+
+#: templates/journal/je_list.html:20
+msgid "To"
+msgstr "ته"
+
+#: templates/journal/je_list.html:26
+msgid "All"
+msgstr "ټول"
+
+#: templates/journal/je_list.html:34
+msgid "Filter"
+msgstr "چاڼول"
+
+#: templates/journal/je_list.html:49
+msgid "Ref"
+msgstr "حواله"
+
+#: templates/journal/je_list.html:52
+msgid "By"
+msgstr "لخوا"
+
+#: templates/journal/je_list.html:67
+msgid "No journal entries found."
+msgstr "هیڅ دفتري ثبت ونه موندل شو."
+
+#: templates/partners/add_new_partner.html:19
+msgid ""
+"This form creates a new partner and adds them to the project at the same "
+"time."
+msgstr ""
+"دا فورم یو نوی ملګری جوړوي او هم پروژې ته یې اضافه کوي."
+
+#: templates/partners/add_new_partner.html:26
+msgid "Partner Information"
+msgstr "د ملګري معلومات"
+
+#: templates/partners/add_new_partner.html:40
+msgid "Project Partnership"
+msgstr "د پروژې ملګرتیا"
+
+#: templates/partners/add_new_partner.html:55
+#: templates/projects/dashboard.html:150
+msgid "Add Partner"
+msgstr "ملګری اضافه کړئ"
+
+#: templates/partners/shareholder_list.html:22
+#: templates/projects/dashboard.html:112
+#, python-format
+msgid "Ownership %%"
+msgstr "د ملکیت %%"
+
+#: templates/partners/shareholder_list.html:23
+#: templates/projects/dashboard.html:113
+msgid "Commitment"
+msgstr "ژمنه"
+
+#: templates/partners/shareholder_list.html:24
+#: templates/projects/dashboard.html:114
+msgid "Contributed"
+msgstr "مرسته شوې"
+
+#: templates/partners/shareholder_list.html:25
+#: templates/projects/dashboard.html:115
+msgid "Remaining"
+msgstr "پاتې"
+
+#: templates/partners/shareholder_list.html:26
+msgid "Joined"
+msgstr "یوځای شوي"
+
+#: templates/partners/shareholder_list.html:43
+#: templates/projects/dashboard.html:147
+msgid "No shareholders yet."
+msgstr "لا هیڅ ملګری نشته."
+
+#: templates/projects/_sidebar.html:7
+msgid "Dashboard"
+msgstr "ډشبورډ"
+
+#: templates/projects/_sidebar.html:32 templates/vendors/vendor_list.html:3
+#: templates/vendors/vendor_list.html:8 vendors/apps.py:8 vendors/models.py:24
+#: vendors/views.py:27
+msgid "Vendors"
+msgstr "پلورونکي"
+
+#: templates/projects/_sidebar.html:47
+msgid "All Projects"
+msgstr "ټولې پروژې"
+
+#: templates/projects/dashboard.html:16
+msgid "Edit"
+msgstr "سمول"
+
+#: templates/projects/dashboard.html:26
+msgid "Total Income"
+msgstr "ټول عاید"
+
+#: templates/projects/dashboard.html:34
+msgid "Total Expense"
+msgstr "ټول لګښت"
+
+#: templates/projects/dashboard.html:42
+msgid "Net Profit"
+msgstr "خالص ګټه"
+
+#: templates/projects/dashboard.html:52
+msgid "Total Payables"
+msgstr "ټول پورونه"
+
+#: templates/projects/dashboard.html:98
+msgid "Add New Partner"
+msgstr "نوی ملګری اضافه کړئ"
+
+#: templates/projects/dashboard.html:101
+msgid "Add Existing Partner"
+msgstr "موجود ملګری اضافه کړئ"
+
+#: templates/projects/dashboard.html:116
+msgid "Progress"
+msgstr "پرمختګ"
+
+#: templates/projects/dashboard.html:160
+msgid "Record Transaction"
+msgstr "معامله ثبت کړئ"
+
+#: templates/projects/dashboard.html:191
+msgid "Vendor Advance"
+msgstr "د پلورونکي مخکنۍ تادیه"
+
+#: templates/projects/dashboard.html:199
+msgid "Vendor Payment"
+msgstr "د پلورونکي تادیه"
+
+#: templates/projects/dashboard.html:207
+#: templates/vendors/vendor_detail.html:45
+msgid "Advance Settlement"
+msgstr "مخکنۍ تادیه تصفیه"
+
+#: templates/projects/dashboard.html:215
+#: templates/vendors/vendor_detail.html:48
+msgid "Direct Payment"
+msgstr "مستقیم تادیه"
+
+#: templates/projects/dashboard.html:247
+msgid "Bank Deposit"
+msgstr "د بانک جمع"
+
+#: templates/projects/dashboard.html:287
+msgid "Manual Journal"
+msgstr "لاسي دفتر"
+
+#: templates/projects/dashboard.html:300
+msgid "Recent Transactions"
+msgstr "وروستۍ معاملې"
+
+#: templates/projects/dashboard.html:301
+msgid "View All"
+msgstr "ټول وګورئ"
+
+#: templates/projects/dashboard.html:306
+#: templates/vendors/vendor_detail.html:67 transactions/forms.py:51
+#: transactions/forms.py:74 transactions/forms.py:102 transactions/forms.py:122
+#: transactions/forms.py:145 transactions/forms.py:168
+#: transactions/forms.py:198 transactions/forms.py:220
+#: transactions/forms.py:237 transactions/forms.py:320
+msgid "Amount"
+msgstr "مقدار"
+
+#: templates/projects/project_list.html:24
+msgid "Inactive"
+msgstr "غیر فعال"
+
+#: templates/projects/project_list.html:31
+msgid "Open Dashboard"
+msgstr "ډشبورډ خلاص کړئ"
+
+#: templates/projects/project_list.html:41
+msgid "No projects yet."
+msgstr "لا هیڅ پروژه نشته."
+
+#: templates/projects/project_list.html:43
+msgid "Create First Project"
+msgstr "لومړۍ پروژه جوړه کړئ"
+
+#: templates/transactions/manual_je.html:24
+msgid "Journal entry description"
+msgstr "د دفتري ثبت تفصیل"
+
+#: templates/transactions/manual_je.html:36
+msgid "Rate"
+msgstr "نرخ"
+
+#: templates/transactions/manual_je.html:55
+msgid "Base"
+msgstr "اساسي"
+
+#: templates/transactions/manual_je.html:62
+msgid "note"
+msgstr "یادښت"
+
+#: templates/transactions/manual_je.html:79
+msgid "Add Line"
+msgstr "کرښه اضافه کړئ"
+
+#: templates/transactions/manual_je.html:84
+msgid "Entry is not balanced (Debit ≠ Credit)"
+msgstr "ثبت متوازن نه دی (بدهکار ≠ بستانکار)"
+
+#: templates/transactions/manual_je.html:89
+msgid "Post Journal Entry"
+msgstr "دفتري ثبت خوندي کړئ"
+
+#: templates/transactions/tx_form.html:30
+msgid "Uncheck to record in a foreign currency."
+msgstr "د بهرني اسعارو ثبتولو لپاره غیر چیک کړئ."
+
+#: templates/vendors/vendor_detail.html:17
+msgid "Payable Balance"
+msgstr "د ورکولو پاتې"
+
+#: templates/vendors/vendor_detail.html:27
+msgid "Advance Balance"
+msgstr "د مخکنۍ تادیې پاتې"
+
+#: templates/vendors/vendor_detail.html:36
+msgid "Record Bill"
+msgstr "بل ثبت کړئ"
+
+#: templates/vendors/vendor_detail.html:39
+msgid "Advance Payment"
+msgstr "مخکنۍ تادیه"
+
+#: templates/vendors/vendor_detail.html:42
+msgid "Payment Against Bill"
+msgstr "د بل پر وړاندې تادیه"
+
+#: templates/vendors/vendor_detail.html:59
+msgid "Transaction History"
+msgstr "د معاملو تاریخچه"
+
+#: templates/vendors/vendor_detail.html:90
+msgid "No transactions recorded yet."
+msgstr "لا هیڅ معامله ثبت نشوه."
+
+#: templates/vendors/vendor_list.html:11 vendors/views.py:54
+msgid "New Vendor"
+msgstr "نوی پلورونکی"
+
+#: templates/vendors/vendor_list.html:19
+msgid "Payable"
+msgstr "د ورکولو"
+
+#: templates/vendors/vendor_list.html:19
+msgid "Advance"
+msgstr "مخکنۍ"
+
+#: templates/vendors/vendor_list.html:30
+msgid "No vendors yet."
+msgstr "لا هیڅ پلورونکی نشته."
+
+#: transactions/apps.py:8
+msgid "Transactions"
+msgstr "معاملې"
+
+#: transactions/forms.py:92 transactions/forms.py:117 transactions/forms.py:140
+#: transactions/forms.py:292 transactions/forms.py:310
+#: transactions/forms.py:342 vendors/models.py:23
+msgid "Vendor"
+msgstr "پلورونکی"
+
+#: transactions/forms.py:188
+msgid "From Cashbox"
+msgstr "له صندوقه"
+
+#: transactions/forms.py:193
+msgid "To Cashbox"
+msgstr "صندوق ته"
+
+#: transactions/forms.py:232
+msgid "Asset Account"
+msgstr "د شتمنۍ حساب"
+
+#: transactions/forms.py:262
+msgid "Days / Months"
+msgstr "ورځې / میاشتې"
+
+#: transactions/forms.py:297
+msgid "Settlement Amount"
+msgstr "د تصفیې مقدار"
+
+#: transactions/forms.py:347
+msgid "Refund Amount"
+msgstr "د بیرته ورکولو مقدار"
+
+#: transactions/forms.py:352
+msgid "Received Into"
+msgstr "ترلاسه شوی"
+
+#: transactions/views.py:49
+msgid "Capital contribution recorded."
+msgstr "د سرمایې مرسته ثبت شوه."
+
+#: transactions/views.py:83
+msgid "Withdrawal recorded."
+msgstr "وتل ثبت شول."
+
+#: transactions/views.py:127
+msgid "Vendor bill recorded."
+msgstr "د پلورونکي بل ثبت شو."
+
+#: transactions/views.py:161
+msgid "Vendor advance payment recorded."
+msgstr "د پلورونکي مخکنۍ تادیه ثبت شوه."
+
+#: transactions/views.py:197
+msgid "Vendor payment recorded."
+msgstr "د پلورونکي تادیه ثبت شوه."
+
+#: transactions/views.py:230
+msgid "Cash expense recorded."
+msgstr "نغد لګښت ثبت شو."
+
+#: transactions/views.py:263
+msgid "Cashbox transfer recorded."
+msgstr "د صندوق لیږد ثبت شو."
+
+#: transactions/views.py:296
+msgid "Bank deposit / cash withdrawal recorded."
+msgstr "د بانک جمع / نغد وتل ثبت شول."
+
+#: transactions/views.py:328
+msgid "Project income recorded."
+msgstr "د پروژې عاید ثبت شو."
+
+#: transactions/views.py:359
+msgid "Asset purchase recorded."
+msgstr "د شتمنۍ اخیستل ثبت شول."
+
+#: transactions/views.py:392
+msgid "Salary payment recorded."
+msgstr "د معاش تادیه ثبت شوه."
+
+#: transactions/views.py:445
+msgid "Journal entry is not balanced. Total debit must equal total credit."
+msgstr "دفتري ثبت متوازن نه دی. د بدهکار ټول باید د بستانکار ټول سره مساوي وي."
+
+#: transactions/views.py:447
+msgid "At least one line is required."
+msgstr "لږ تر لږه یوه کرښه اړینه ده."
+
+#: transactions/views.py:450
+msgid "Journal entry recorded."
+msgstr "دفتري ثبت خوندي شو."
+
+#: transactions/views.py:492
+msgid "Vendor advance settlement recorded."
+msgstr "د پلورونکي مخکنۍ تادیه تصفیه ثبت شوه."
+
+#: transactions/views.py:537
+msgid "Vendor direct payment recorded."
+msgstr "د پلورونکي مستقیم تادیه ثبت شوه."
+
+#: transactions/views.py:580
+msgid "Vendor refund recorded."
+msgstr "د پلورونکي بیرته ورکول ثبت شول."
+
+#: vendors/forms.py:9
+msgid "Vendor Name"
+msgstr "د پلورونکي نوم"
+
+#: vendors/models.py:18
+msgid "Advance Account"
+msgstr "د مخکنۍ تادیې حساب"
+
+#: vendors/views.py:46
+msgid "Vendor created."
+msgstr "پلورونکی جوړ شو."

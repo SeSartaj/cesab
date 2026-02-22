@@ -65,7 +65,7 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
 def project_dashboard(request, pk):
     project = get_object_or_404(Project, pk=pk)
 
-    # Partner summary - return as tuples (pp, contributed, remaining)
+    # Partner summary - return as tuples (pp, contributed, remaining, percent_done)
     partners = project.project_partners.filter(is_active=True).select_related(
         "partner", "capital_account", "current_account"
     )
@@ -73,17 +73,25 @@ def project_dashboard(request, pk):
     for pp in partners:
         contributed = pp.contributed_amount()
         remaining = pp.capital_commitment - contributed
-        partner_data.append((pp, contributed, remaining))
+        if pp.capital_commitment > 0:
+            percent_done = min(int((contributed / pp.capital_commitment) * 100), 100)
+        else:
+            percent_done = 0
+        partner_data.append((pp, contributed, remaining, percent_done))
 
     # Cashbox balances
     cashboxes = project.cashboxes.filter(is_active=True).select_related("account", "currency")
     cashbox_data = [(cb, cb.balance()) for cb in cashboxes]
 
-    # Income & Expense summary (sum credit of income accounts, sum debit of expense accounts)
+    # Income & Expense summary
     income_accounts = Account.objects.filter(project=project, account_type="income", is_active=True)
     expense_accounts = Account.objects.filter(project=project, account_type="expense", is_active=True)
     total_income = sum(a.balance() for a in income_accounts)
     total_expense = sum(a.balance() for a in expense_accounts)
+
+    # Total payables (liability accounts with credit balance)
+    liability_accounts = Account.objects.filter(project=project, account_type="liability", is_active=True)
+    total_payables = sum(a.balance() for a in liability_accounts if a.balance() > 0)
 
     # Recent journal entries
     recent_entries = project.journal_entries.all()[:10]
@@ -95,5 +103,6 @@ def project_dashboard(request, pk):
         "total_income": total_income,
         "total_expense": total_expense,
         "net_profit": total_income - total_expense,
+        "total_payables": total_payables,
         "recent_entries": recent_entries,
     })

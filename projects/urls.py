@@ -16,4 +16,5 @@ urlpatterns = [
     path("<int:project_pk>/journal/", include("journal.urls")),
     path("<int:project_pk>/transactions/", include("transactions.urls")),
     path("<int:project_pk>/coa/", include("coa.urls")),
+    path("<int:project_pk>/inventory/", include("inventory.urls")),
 ]

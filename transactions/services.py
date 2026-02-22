@@ -252,3 +252,83 @@ def manual_journal_entry(project, user, date, description, lines):
             description=line.get("description", ""),
         )
     return je
+
+
+def vendor_advance_settlement(project, user, date, vendor, amount,
+                               description="", currency=None, exchange_rate=1):
+    """
+    Settle vendor advance against payable balance.
+    Dr. Vendor Payable Account
+    Cr. Vendor Advance Account
+    """
+    currency = currency or project.base_currency
+    je = _create_je(project, user, date,
+                    description or f"Advance settlement for {vendor.name}",
+                    "vendor_advance_settlement")
+    _add_line(je, vendor.payable_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
+    _add_line(je, vendor.advance_account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    return je
+
+
+def vendor_direct_payment(project, user, date, vendor, expense_account, amount, cashbox,
+                           description="", currency=None, exchange_rate=1):
+    """
+    Pay vendor directly without a bill (direct cash payment).
+    Dr. Expense Account
+    Cr. Cashbox Account
+    """
+    currency = currency or project.base_currency
+    _check_cashbox_balance(cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
+    je = _create_je(project, user, date,
+                    description or f"Direct payment to {vendor.name}",
+                    "vendor_direct_payment")
+    _add_line(je, expense_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
+    _add_line(je, cashbox.account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    return je
+
+
+def vendor_refund(project, user, date, vendor, amount, cashbox,
+                  description="", currency=None, exchange_rate=1):
+    """
+    Vendor refunds money back.
+    Dr. Cashbox Account
+    Cr. Vendor Payable Account
+    """
+    currency = currency or project.base_currency
+    je = _create_je(project, user, date,
+                    description or f"Refund from {vendor.name}",
+                    "vendor_refund")
+    _add_line(je, cashbox.account, debit=amount, currency=currency, exchange_rate=exchange_rate)
+    _add_line(je, vendor.payable_account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    return je
+
+
+def create_correction_entry(original_je, user, description=""):
+    """
+    Create a counter-balancing correction entry that reverses the original.
+    All debits become credits and vice versa.
+    Users can never delete journal entries — they can only correct them.
+    """
+    from django.utils import timezone
+    project = original_je.project
+    je = JournalEntry.objects.create(
+        project=project,
+        date=timezone.now().date(),
+        description=description or f"Correction for JE-{original_je.pk:04d}: {original_je.description}",
+        transaction_type="correction",
+        corrects=original_je,
+        created_by=user,
+    )
+    for line in original_je.lines.all():
+        JournalLine.objects.create(
+            journal_entry=je,
+            account=line.account,
+            debit=line.credit,    # swap
+            credit=line.debit,    # swap
+            transaction_currency=line.transaction_currency,
+            exchange_rate=line.exchange_rate,
+            debit_tc=line.credit_tc,
+            credit_tc=line.debit_tc,
+            description=f"Correction: {line.description}",
+        )
+    return je

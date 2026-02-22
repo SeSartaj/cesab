@@ -78,6 +78,15 @@
                 <button type="submit" class="dropdown-item">دری </button>
               </form>
             </li>
+            <li>
+              <form action="{% url 'set_language' %}" method="post" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="language" value="ps">
+                {% lang_url 'ps' as ps_url %}
+                <input type="hidden" name="next" value="{{ ps_url }}">
+                <button type="submit" class="dropdown-item">پښتو</button>
+              </form>
+            </li>
           </ul>
         </li>
         <li class="nav-item">

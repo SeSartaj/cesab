@@ -21,8 +21,12 @@ class User(AbstractUser):
 
     @property
     def can_edit(self):
-        return self.role in ("admin", "accountant")
+        """Check if user can perform write operations via model permissions."""
+        return (
+            self.is_superuser
+            or self.has_perm("journal.add_journalentry")
+        )
 
     @property
     def is_admin_role(self):
-        return self.role == "admin"
+        return self.is_superuser or self.has_perm("auth_users.change_user")

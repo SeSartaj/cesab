@@ -31,16 +31,62 @@
   </div>
 </div>
 {% if request.user.can_edit %}
-<div class="d-flex gap-2 mb-3">
-  <a href="{% url 'projects:vendor_bill' project_pk=project.pk %}" class="btn btn-outline-danger btn-sm">
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <a href="{% url 'projects:vendor_bill' project_pk=project.pk %}?vendor={{ vendor.pk }}" class="btn btn-outline-danger btn-sm">
     <i class="bi bi-receipt"></i> {% trans "Record Bill" %}
   </a>
-  <a href="{% url 'projects:vendor_advance' project_pk=project.pk %}" class="btn btn-outline-info btn-sm">
+  <a href="{% url 'projects:vendor_advance' project_pk=project.pk %}?vendor={{ vendor.pk }}" class="btn btn-outline-info btn-sm">
     <i class="bi bi-arrow-up-right-circle"></i> {% trans "Advance Payment" %}
   </a>
-  <a href="{% url 'projects:vendor_payment' project_pk=project.pk %}" class="btn btn-outline-primary btn-sm">
+  <a href="{% url 'projects:vendor_payment' project_pk=project.pk %}?vendor={{ vendor.pk }}" class="btn btn-outline-primary btn-sm">
     <i class="bi bi-cash"></i> {% trans "Payment Against Bill" %}
   </a>
+  <a href="{% url 'projects:vendor_advance_settlement' project_pk=project.pk %}?vendor={{ vendor.pk }}" class="btn btn-outline-success btn-sm">
+    <i class="bi bi-check2-circle"></i> {% trans "Advance Settlement" %}
+  </a>
+  <a href="{% url 'projects:vendor_direct_payment' project_pk=project.pk %}?vendor={{ vendor.pk }}" class="btn btn-outline-dark btn-sm">
+    <i class="bi bi-send"></i> {% trans "Direct Payment" %}
+  </a>
+  <a href="{% url 'projects:vendor_refund' project_pk=project.pk %}?vendor={{ vendor.pk }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-return-left"></i> {% trans "Vendor Refund" %}
+  </a>
 </div>
+{% endif %}
+
+<!-- Vendor Transaction History -->
+{% if vendor_entries %}
+<div class="card">
+  <div class="card-header"><i class="bi bi-clock-history"></i> {% trans "Transaction History" %}</div>
+  <div class="card-body p-0">
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>{% trans "Date" %}</th>
+          <th>{% trans "Type" %}</th>
+          <th>{% trans "Description" %}</th>
+          <th class="text-end">{% trans "Amount" %}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for je in vendor_entries %}
+        <tr>
+          <td>{{ je.date }}</td>
+          <td><span class="badge bg-secondary">{{ je.get_transaction_type_display }}</span></td>
+          <td>{{ je.description|truncatechars:45 }}</td>
+          <td class="text-end">{{ je.total_debit|floatformat:2 }}</td>
+          <td>
+            <a href="{% url 'projects:je_detail' project_pk=project.pk pk=je.pk %}" class="btn btn-sm btn-outline-secondary py-0 px-1">
+              <i class="bi bi-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<p class="text-muted text-center py-3"><i class="bi bi-inbox fs-3 d-block mb-1"></i>{% trans "No transactions recorded yet." %}</p>
 {% endif %}
 {% endblock %}

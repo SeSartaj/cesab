@@ -9,6 +9,7 @@ from projects.models import Project
 from cash.models import Cashbox
 from coa.models import Account
 from journal.models import JournalEntry, JournalLine
+from vendors.models import Vendor
 import transactions.services as svc
 from . import forms as tx_forms
 
@@ -35,17 +36,20 @@ def capital_contribution(request, project_pk):
         form = tx_forms.CapitalContributionForm(project, request.POST)
         if form.is_valid():
             d = form.cleaned_data
+            use_base = d.get("use_base_currency", True)
+            currency = None if use_base else d.get("currency")
+            exchange_rate = 1 if use_base else (d.get("exchange_rate") or 1)
             svc.capital_contribution(
                 project=project, user=request.user,
                 date=d["date"], project_partner=d["project_partner"],
                 amount=d["amount"], cashbox=d["cashbox"],
                 description=d.get("description", ""),
-                currency=d.get("currency"), exchange_rate=d.get("exchange_rate") or 1,
+                currency=currency, exchange_rate=exchange_rate,
             )
             messages.success(request, _("Capital contribution recorded."))
             return _dash_redirect(project_pk)
     else:
-        form = tx_forms.CapitalContributionForm(project, initial={"date": timezone.now().date()})
+        form = tx_forms.CapitalContributionForm(project, initial={"date": timezone.now().date(), "use_base_currency": True})
 
     return render(request, "transactions/tx_form.html", {
         "project": project, "form": form,
@@ -65,20 +69,23 @@ def shareholder_withdrawal(request, project_pk):
         form = tx_forms.ShareholderWithdrawalForm(project, request.POST)
         if form.is_valid():
             d = form.cleaned_data
+            use_base = d.get("use_base_currency", True)
+            currency = None if use_base else d.get("currency")
+            exchange_rate = 1 if use_base else (d.get("exchange_rate") or 1)
             try:
                 svc.shareholder_withdrawal(
                     project=project, user=request.user,
                     date=d["date"], project_partner=d["project_partner"],
                     amount=d["amount"], cashbox=d["cashbox"],
                     description=d.get("description", ""),
-                    currency=d.get("currency"), exchange_rate=d.get("exchange_rate") or 1,
+                    currency=currency, exchange_rate=exchange_rate,
                 )
                 messages.success(request, _("Withdrawal recorded."))
                 return _dash_redirect(project_pk)
             except ValueError as e:
                 messages.error(request, str(e))
     else:
-        form = tx_forms.ShareholderWithdrawalForm(project, initial={"date": timezone.now().date()})
+        form = tx_forms.ShareholderWithdrawalForm(project, initial={"date": timezone.now().date(), "use_base_currency": True})
 
     return render(request, "transactions/tx_form.html", {
         "project": project, "form": form,
@@ -94,21 +101,33 @@ def vendor_bill(request, project_pk):
     if denied:
         return denied
 
+    # Pre-select vendor if provided via query string (?vendor=<pk>)
+    initial_vendor_pk = request.GET.get("vendor")
+    initial = {"date": timezone.now().date(), "use_base_currency": True}
+    if initial_vendor_pk:
+        try:
+            initial["vendor"] = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+        except Vendor.DoesNotExist:
+            pass
+
     if request.method == "POST":
         form = tx_forms.VendorBillForm(project, request.POST)
         if form.is_valid():
             d = form.cleaned_data
+            use_base = d.get("use_base_currency", True)
+            currency = None if use_base else d.get("currency")
+            exchange_rate = 1 if use_base else (d.get("exchange_rate") or 1)
             svc.vendor_bill(
                 project=project, user=request.user,
                 date=d["date"], vendor=d["vendor"],
                 expense_account=d["expense_account"], amount=d["amount"],
                 description=d.get("description", ""),
-                currency=d.get("currency"), exchange_rate=d.get("exchange_rate") or 1,
+                currency=currency, exchange_rate=exchange_rate,
             )
             messages.success(request, _("Vendor bill recorded."))
             return _dash_redirect(project_pk)
     else:
-        form = tx_forms.VendorBillForm(project, initial={"date": timezone.now().date()})
+        form = tx_forms.VendorBillForm(project, initial=initial)
 
     return render(request, "transactions/tx_form.html", {
         "project": project, "form": form,
@@ -128,20 +147,23 @@ def vendor_advance(request, project_pk):
         form = tx_forms.VendorAdvanceForm(project, request.POST)
         if form.is_valid():
             d = form.cleaned_data
+            use_base = d.get("use_base_currency", True)
+            currency = None if use_base else d.get("currency")
+            exchange_rate = 1 if use_base else (d.get("exchange_rate") or 1)
             try:
                 svc.vendor_advance_payment(
                     project=project, user=request.user,
                     date=d["date"], vendor=d["vendor"],
                     amount=d["amount"], cashbox=d["cashbox"],
                     description=d.get("description", ""),
-                    currency=d.get("currency"), exchange_rate=d.get("exchange_rate") or 1,
+                    currency=currency, exchange_rate=exchange_rate,
                 )
                 messages.success(request, _("Vendor advance payment recorded."))
                 return _dash_redirect(project_pk)
             except ValueError as e:
                 messages.error(request, str(e))
     else:
-        form = tx_forms.VendorAdvanceForm(project, initial={"date": timezone.now().date()})
+        form = tx_forms.VendorAdvanceForm(project, initial={"date": timezone.now().date(), "use_base_currency": True})
 
     return render(request, "transactions/tx_form.html", {
         "project": project, "form": form,
@@ -161,20 +183,23 @@ def vendor_payment(request, project_pk):
         form = tx_forms.VendorPaymentForm(project, request.POST)
         if form.is_valid():
             d = form.cleaned_data
+            use_base = d.get("use_base_currency", True)
+            currency = None if use_base else d.get("currency")
+            exchange_rate = 1 if use_base else (d.get("exchange_rate") or 1)
             try:
                 svc.vendor_payment_against_bill(
                     project=project, user=request.user,
                     date=d["date"], vendor=d["vendor"],
                     amount=d["amount"], cashbox=d["cashbox"],
                     description=d.get("description", ""),
-                    currency=d.get("currency"), exchange_rate=d.get("exchange_rate") or 1,
+                    currency=currency, exchange_rate=exchange_rate,
                 )
                 messages.success(request, _("Vendor payment recorded."))
                 return _dash_redirect(project_pk)
             except ValueError as e:
                 messages.error(request, str(e))
     else:
-        form = tx_forms.VendorPaymentForm(project, initial={"date": timezone.now().date()})
+        form = tx_forms.VendorPaymentForm(project, initial={"date": timezone.now().date(), "use_base_currency": True})
 
     return render(request, "transactions/tx_form.html", {
         "project": project, "form": form,
@@ -431,4 +456,134 @@ def manual_je(request, project_pk):
         "accounts": accounts,
         "currencies": currencies,
         "base_currency": base_currency,
+    })
+
+
+@login_required
+def vendor_advance_settlement(request, project_pk):
+    project = get_object_or_404(Project, pk=project_pk)
+    denied = _require_edit(request, project_pk)
+    if denied:
+        return denied
+
+    initial_vendor_pk = request.GET.get("vendor")
+    initial = {"date": timezone.now().date(), "use_base_currency": True}
+    if initial_vendor_pk:
+        try:
+            initial["vendor"] = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+        except Vendor.DoesNotExist:
+            pass
+
+    if request.method == "POST":
+        form = tx_forms.VendorAdvanceSettlementForm(project, request.POST)
+        if form.is_valid():
+            d = form.cleaned_data
+            use_base = d.get("use_base_currency", True)
+            currency = None if use_base else d.get("currency")
+            exchange_rate = 1 if use_base else (d.get("exchange_rate") or 1)
+            try:
+                svc.vendor_advance_settlement(
+                    project=project, user=request.user,
+                    date=d["date"], vendor=d["vendor"],
+                    amount=d["amount"],
+                    description=d.get("description", ""),
+                    currency=currency, exchange_rate=exchange_rate,
+                )
+                messages.success(request, _("Vendor advance settlement recorded."))
+                return _dash_redirect(project_pk)
+            except ValueError as e:
+                messages.error(request, str(e))
+    else:
+        form = tx_forms.VendorAdvanceSettlementForm(project, initial=initial)
+
+    return render(request, "transactions/tx_form.html", {
+        "project": project, "form": form,
+        "title": _("Vendor Advance Settlement"),
+        "tx_type": "vendor_advance_settlement",
+    })
+
+
+@login_required
+def vendor_direct_payment(request, project_pk):
+    project = get_object_or_404(Project, pk=project_pk)
+    denied = _require_edit(request, project_pk)
+    if denied:
+        return denied
+
+    initial_vendor_pk = request.GET.get("vendor")
+    initial = {"date": timezone.now().date(), "use_base_currency": True}
+    if initial_vendor_pk:
+        try:
+            initial["vendor"] = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+        except Vendor.DoesNotExist:
+            pass
+
+    if request.method == "POST":
+        form = tx_forms.VendorDirectPaymentForm(project, request.POST)
+        if form.is_valid():
+            d = form.cleaned_data
+            use_base = d.get("use_base_currency", True)
+            currency = None if use_base else d.get("currency")
+            exchange_rate = 1 if use_base else (d.get("exchange_rate") or 1)
+            try:
+                svc.vendor_direct_payment(
+                    project=project, user=request.user,
+                    date=d["date"], vendor=d["vendor"],
+                    expense_account=d["expense_account"],
+                    amount=d["amount"], cashbox=d["cashbox"],
+                    description=d.get("description", ""),
+                    currency=currency, exchange_rate=exchange_rate,
+                )
+                messages.success(request, _("Vendor direct payment recorded."))
+                return _dash_redirect(project_pk)
+            except ValueError as e:
+                messages.error(request, str(e))
+    else:
+        form = tx_forms.VendorDirectPaymentForm(project, initial=initial)
+
+    return render(request, "transactions/tx_form.html", {
+        "project": project, "form": form,
+        "title": _("Vendor Direct Payment"),
+        "tx_type": "vendor_direct_payment",
+    })
+
+
+@login_required
+def vendor_refund(request, project_pk):
+    project = get_object_or_404(Project, pk=project_pk)
+    denied = _require_edit(request, project_pk)
+    if denied:
+        return denied
+
+    initial_vendor_pk = request.GET.get("vendor")
+    initial = {"date": timezone.now().date(), "use_base_currency": True}
+    if initial_vendor_pk:
+        try:
+            initial["vendor"] = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+        except Vendor.DoesNotExist:
+            pass
+
+    if request.method == "POST":
+        form = tx_forms.VendorRefundForm(project, request.POST)
+        if form.is_valid():
+            d = form.cleaned_data
+            use_base = d.get("use_base_currency", True)
+            currency = None if use_base else d.get("currency")
+            exchange_rate = 1 if use_base else (d.get("exchange_rate") or 1)
+            svc.vendor_refund(
+                project=project, user=request.user,
+                date=d["date"], vendor=d["vendor"],
+                amount=d["amount"], cashbox=d["cashbox"],
+                description=d.get("description", ""),
+                currency=currency, exchange_rate=exchange_rate,
+            )
+            messages.success(request, _("Vendor refund recorded."))
+            return _dash_redirect(project_pk)
+    else:
+        form = tx_forms.VendorRefundForm(project, initial=initial)
+
+    return render(request, "transactions/tx_form.html", {
+        "project": project, "form": form,
+        "title": _("Vendor Refund"),
+        "tx_type": "vendor_refund",
     })

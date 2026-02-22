@@ -37,6 +37,11 @@
         <i class="bi bi-person-badge"></i> {% trans "Employees" %}
       </a>
     </li>
+    <li class="nav-item">
+      <a class="nav-link {% if active == 'inventory' %}active{% endif %}" href="{% url 'projects:inventory' project_pk=project.pk %}">
+        <i class="bi bi-boxes"></i> {% trans "Inventory" %}
+      </a>
+    </li>
     <li class="mt-3">
       <a class="btn btn-sm btn-outline-secondary w-100" href="{% url 'projects:list' %}">
         <i class="bi bi-arrow-left"></i> {% trans "All Projects" %}
