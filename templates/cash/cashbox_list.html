@@ -20,9 +20,12 @@
         <i class="bi bi-safe2 display-5 text-primary"></i>
         <h5 class="mt-2">{{ cb.name }}</h5>
         <div class="text-muted small">{{ cb.currency.code }}</div>
-        <div class="display-6 mt-2 fw-bold {% if bal >= 0 %}text-success{% else %}text-danger{% endif %}">
-          {{ bal|floatformat:2 }}
+        {% with cb_bal=cb.balance_in_currency %}
+        <div class="display-6 mt-2 fw-bold {% if cb_bal >= 0 %}text-success{% else %}text-danger{% endif %}">
+          {{ cb_bal|floatformat:2 }}
         </div>
+        <div class="text-muted small">{{ cb.currency.code }}</div>
+        {% endwith %}
       </div>
     </div>
   </div>

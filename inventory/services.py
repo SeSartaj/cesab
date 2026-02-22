@@ -73,8 +73,42 @@ def record_inventory_purchase(project, user, date, item, quantity, unit_cost,
 
 
 @db_transaction.atomic
-def record_inventory_consumption(project, user, date, item, quantity,
-                                  description=""):
+def record_inventory_purchase_on_credit(project, user, date, item, quantity, unit_cost,
+                                         vendor, description="", currency=None, exchange_rate=1):
+    """
+    Purchase inventory on credit from a vendor (creates a payable, no cash out).
+    Dr. Inventory Asset Account
+    Cr. Vendor Payable Account
+    """
+    currency = currency or project.base_currency
+    rate = Decimal(str(exchange_rate))
+    qty = Decimal(str(quantity))
+    cost = Decimal(str(unit_cost))
+    total = (qty * cost * rate).quantize(Decimal("0.01"))
+
+    je = _create_je(
+        project, user, date,
+        description or f"Inventory purchase on credit: {item.name} x {quantity} {item.unit} from {vendor.name}",
+        "inventory_purchase",
+    )
+    _add_line(je, item.inventory_account, debit=qty * cost, currency=currency, exchange_rate=exchange_rate)
+    _add_line(je, vendor.payable_account, credit=qty * cost, currency=currency, exchange_rate=exchange_rate)
+
+    InventoryMovement.objects.create(
+        project=project,
+        item=item,
+        movement_type="purchase",
+        quantity=qty,
+        unit_cost=cost,
+        total_cost=total,
+        journal_entry=je,
+        created_by=user,
+    )
+    return je
+
+
+@db_transaction.atomic
+def record_inventory_consumption(project, user, date, item, quantity, description=""):
     """
     Consume inventory (expense it) using weighted average cost.
     Dr. Expense Account

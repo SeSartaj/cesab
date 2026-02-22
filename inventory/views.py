@@ -70,19 +70,29 @@ def inventory_purchase(request, project_pk):
             use_base = d.get("use_base_currency", True)
             currency = None if use_base else d.get("currency")
             exchange_rate = 1 if use_base else (d.get("exchange_rate") or 1)
-            svc.record_inventory_purchase(
-                project=project, user=request.user,
-                date=d["date"], item=d["item"],
-                quantity=d["quantity"], unit_cost=d["unit_cost"],
-                cashbox=d["cashbox"],
-                description=d.get("description", ""),
-                currency=currency, exchange_rate=exchange_rate,
-            )
+            if d["payment_method"] == "vendor_bill":
+                svc.record_inventory_purchase_on_credit(
+                    project=project, user=request.user,
+                    date=d["date"], item=d["item"],
+                    quantity=d["quantity"], unit_cost=d["unit_cost"],
+                    vendor=d["vendor"],
+                    description=d.get("description", ""),
+                    currency=currency, exchange_rate=exchange_rate,
+                )
+            else:
+                svc.record_inventory_purchase(
+                    project=project, user=request.user,
+                    date=d["date"], item=d["item"],
+                    quantity=d["quantity"], unit_cost=d["unit_cost"],
+                    cashbox=d["cashbox"],
+                    description=d.get("description", ""),
+                    currency=currency, exchange_rate=exchange_rate,
+                )
             messages.success(request, _("Inventory purchase recorded."))
             return redirect(reverse("projects:inventory", kwargs={"project_pk": project_pk}))
     else:
         form = inv_forms.InventoryPurchaseForm(
-            project, initial={"date": timezone.now().date(), "use_base_currency": True}
+            project, initial={"date": timezone.now().date(), "use_base_currency": True, "payment_method": "cashbox"}
         )
 
     return render(request, "inventory/movement_form.html", {

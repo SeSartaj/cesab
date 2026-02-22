@@ -4,6 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from core.models import Currency
 from cash.models import Cashbox
 from partners.models import ProjectPartner
+from vendors.models import Vendor
 from .models import InventoryItem
 
 
@@ -21,6 +22,11 @@ class InventoryItemForm(forms.Form):
 
 
 class InventoryPurchaseForm(forms.Form):
+    PAYMENT_METHODS = [
+        ("cashbox", _("Pay Now (Cashbox)")),
+        ("vendor_bill", _("On Credit — Vendor Bill")),
+    ]
+
     item = forms.ModelChoiceField(
         queryset=InventoryItem.objects.none(),
         widget=forms.Select(attrs={"class": "form-select"}),
@@ -40,10 +46,23 @@ class InventoryPurchaseForm(forms.Form):
         widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.000001", "min": "0"}),
         label=_("Unit Cost"),
     )
+    payment_method = forms.ChoiceField(
+        choices=PAYMENT_METHODS,
+        initial="cashbox",
+        widget=forms.RadioSelect(attrs={"class": "form-check-input"}),
+        label=_("Payment Method"),
+    )
     cashbox = forms.ModelChoiceField(
         queryset=Cashbox.objects.none(),
+        required=False,
         widget=forms.Select(attrs={"class": "form-select"}),
         label=_("Paid From"),
+    )
+    vendor = forms.ModelChoiceField(
+        queryset=Vendor.objects.none(),
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select"}),
+        label=_("Vendor"),
     )
     description = forms.CharField(
         required=False,
@@ -73,6 +92,16 @@ class InventoryPurchaseForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.fields["item"].queryset = InventoryItem.objects.filter(project=project, is_active=True)
         self.fields["cashbox"].queryset = Cashbox.objects.filter(project=project, is_active=True)
+        self.fields["vendor"].queryset = Vendor.objects.filter(project=project, is_active=True)
+
+    def clean(self):
+        cleaned = super().clean()
+        method = cleaned.get("payment_method")
+        if method == "cashbox" and not cleaned.get("cashbox"):
+            self.add_error("cashbox", _("Please select a cashbox."))
+        elif method == "vendor_bill" and not cleaned.get("vendor"):
+            self.add_error("vendor", _("Please select a vendor."))
+        return cleaned
 
 
 class InventoryConsumptionForm(forms.Form):

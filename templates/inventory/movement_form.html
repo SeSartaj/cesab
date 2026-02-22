@@ -18,7 +18,33 @@
         <form method="post" id="movementForm">
           {% csrf_token %}
           {% for field in form %}
-            {% if field.name == "use_base_currency" %}
+            {% if field.name == "payment_method" %}
+            <!-- Payment Method Radio -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">{{ field.label }}</label>
+              <div class="d-flex gap-3">
+                {% for radio in field %}
+                <div class="form-check">
+                  {{ radio.tag }}
+                  <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                </div>
+                {% endfor %}
+              </div>
+              {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
+            </div>
+            {% elif field.name == "cashbox" %}
+            <div class="mb-3 payment-cashbox-field">
+              <label class="form-label fw-semibold">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
+            </div>
+            {% elif field.name == "vendor" %}
+            <div class="mb-3 payment-vendor-field">
+              <label class="form-label fw-semibold">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
+            </div>
+            {% elif field.name == "use_base_currency" %}
             <!-- Base Currency Checkbox -->
             <div class="mb-3 p-3 bg-light rounded border">
               <div class="form-check form-switch">
@@ -70,19 +96,28 @@
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+  // Base currency toggle
   const checkbox = document.getElementById("id_use_base_currency");
   const currencyFields = document.querySelectorAll(".currency-field");
-
-  function toggle() {
+  function toggleCurrency() {
     const isBase = checkbox && checkbox.checked;
-    currencyFields.forEach(function (el) {
-      el.style.display = isBase ? "none" : "";
-    });
+    currencyFields.forEach(el => el.style.display = isBase ? "none" : "");
   }
+  if (checkbox) { toggleCurrency(); checkbox.addEventListener("change", toggleCurrency); }
 
-  if (checkbox) {
-    toggle();
-    checkbox.addEventListener("change", toggle);
+  // Payment method toggle (cashbox vs vendor)
+  const paymentRadios = document.querySelectorAll("input[name='payment_method']");
+  const cashboxFields = document.querySelectorAll(".payment-cashbox-field");
+  const vendorFields  = document.querySelectorAll(".payment-vendor-field");
+  function togglePayment() {
+    const selected = document.querySelector("input[name='payment_method']:checked");
+    const method = selected ? selected.value : "cashbox";
+    cashboxFields.forEach(el => el.style.display = method === "cashbox" ? "" : "none");
+    vendorFields.forEach(el  => el.style.display = method === "vendor_bill" ? "" : "none");
+  }
+  if (paymentRadios.length) {
+    togglePayment();
+    paymentRadios.forEach(r => r.addEventListener("change", togglePayment));
   }
 });
 </script>

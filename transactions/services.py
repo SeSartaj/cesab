@@ -113,15 +113,67 @@ def vendor_payment_against_bill(project, user, date, vendor, amount, cashbox,
                                 description="", currency=None, exchange_rate=1):
     """
     Payment against vendor bill.
-    Dr. Vendor Payable Account
-    Cr. Cashbox Account
+    The payable is always reduced at the weighted-average rate of the outstanding
+    payable balance (i.e. the original bill rate). Any difference between that
+    and the current payment rate goes to FX Gain or FX Loss.
+
+    Dr. Vendor Payable Account   (at weighted-average bill rate)
+    Dr. FX Loss Account          (when payment rate > bill rate — we pay more)
+    Cr. FX Gain Account          (when payment rate < bill rate — we pay less)
+    Cr. Cashbox Account          (at current payment rate)
     """
+    from coa.services import get_or_create_fx_accounts
+    from django.db.models import Sum
+
     currency = currency or project.base_currency
-    _check_cashbox_balance(cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
+    payment_rate = Decimal(str(exchange_rate))
+    amount_tc = Decimal(str(amount))
+
+    # Weighted-average rate of the outstanding payable (= original bill rate)
+    # Only relevant when a foreign currency is involved (payment_rate != 1).
+    bill_rate = payment_rate  # default: no FX difference
+    fx_diff = Decimal("0")
+
+    if payment_rate != Decimal("1"):
+        agg = JournalLine.objects.filter(account=vendor.payable_account).aggregate(
+            bc_credit=Sum("credit"),
+            bc_debit=Sum("debit"),
+            tc_credit=Sum("credit_tc"),
+            tc_debit=Sum("debit_tc"),
+        )
+        outstanding_bc = (agg["bc_credit"] or Decimal("0")) - (agg["bc_debit"] or Decimal("0"))
+        outstanding_tc = (agg["tc_credit"] or Decimal("0")) - (agg["tc_debit"] or Decimal("0"))
+
+        if outstanding_tc > Decimal("0"):
+            bill_rate = (outstanding_bc / outstanding_tc).quantize(Decimal("0.000001"))
+
+        payable_debit_bc = (amount_tc * bill_rate).quantize(Decimal("0.01"))
+        cashbox_credit_bc = (amount_tc * payment_rate).quantize(Decimal("0.01"))
+        fx_diff = payable_debit_bc - cashbox_credit_bc  # >0 = gain, <0 = loss
+
+    _check_cashbox_balance(cashbox, (amount_tc * payment_rate).quantize(Decimal("0.01")))
+
     je = _create_je(project, user, date, description or f"Payment to {vendor.name}",
                     "vendor_payment")
-    _add_line(je, vendor.payable_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
-    _add_line(je, cashbox.account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+
+    # Reduce payable at the original bill rate
+    _add_line(je, vendor.payable_account, debit=amount_tc, currency=currency, exchange_rate=bill_rate)
+
+    # Book exchange difference if any
+    if fx_diff != Decimal("0"):
+        gain_acc, loss_acc = get_or_create_fx_accounts(project)
+        if fx_diff > 0:
+            # We owe more (BC) than we actually pay → FX Gain
+            _add_line(je, gain_acc, credit=fx_diff,
+                      currency=project.base_currency, exchange_rate=1)
+        else:
+            # We pay more (BC) than the book value of the payable → FX Loss
+            _add_line(je, loss_acc, debit=-fx_diff,
+                      currency=project.base_currency, exchange_rate=1)
+
+    # Pay from cashbox at the current payment rate
+    _add_line(je, cashbox.account, credit=amount_tc, currency=currency, exchange_rate=payment_rate)
+
     return je
 
 

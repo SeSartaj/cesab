@@ -19,12 +19,14 @@ STANDARD_COA = [
     {"code": "3300", "name": "Retained Earnings", "type": "equity", "parent_code": "3000"},
     {"code": "4000", "name": "Income", "type": "income", "parent_code": None},
     {"code": "4100", "name": "Project Revenue", "type": "income", "parent_code": "4000"},
+    {"code": "4200", "name": "FX Gain", "type": "income", "parent_code": "4000"},
     {"code": "5000", "name": "Expenses", "type": "expense", "parent_code": None},
     {"code": "5100", "name": "Direct Costs", "type": "expense", "parent_code": "5000"},
     {"code": "5200", "name": "Salaries & Wages", "type": "expense", "parent_code": "5000"},
     {"code": "5300", "name": "General & Administrative", "type": "expense", "parent_code": "5000"},
     {"code": "5400", "name": "Asset Expenses", "type": "expense", "parent_code": "5000"},
     {"code": "5500", "name": "Inventory Expense", "type": "expense", "parent_code": "5000"},
+    {"code": "5600", "name": "FX Loss", "type": "expense", "parent_code": "5000"},
 ]
 
 
@@ -43,6 +45,37 @@ def create_standard_coa(project):
         )
         accounts[entry["code"]] = account
     return accounts
+
+
+def get_or_create_fx_accounts(project):
+    """
+    Return (fx_gain_account, fx_loss_account) for the project.
+    Creates them if they don't exist yet (needed for projects created before
+    FX accounts were added to the standard COA).
+    """
+    gain_parent = Account.objects.filter(project=project, code="4000").first()
+    loss_parent = Account.objects.filter(project=project, code="5000").first()
+    gain_acc, _ = Account.objects.get_or_create(
+        project=project,
+        code="4200",
+        defaults={
+            "name": "FX Gain",
+            "account_type": "income",
+            "parent": gain_parent,
+            "is_system": True,
+        },
+    )
+    loss_acc, _ = Account.objects.get_or_create(
+        project=project,
+        code="5600",
+        defaults={
+            "name": "FX Loss",
+            "account_type": "expense",
+            "parent": loss_parent,
+            "is_system": True,
+        },
+    )
+    return gain_acc, loss_acc
 
 
 def _next_code(project, prefix, start=1):

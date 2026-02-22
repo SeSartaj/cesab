@@ -79,7 +79,7 @@
           <td>{{ cb.name }}</td>
           <td>{{ cb.currency.code }}</td>
           <td class="text-end fw-bold {% if bal >= 0 %}text-success{% else %}text-danger{% endif %}">
-            {{ bal|floatformat:2 }}
+            {{ cb.balance_in_currency|floatformat:2 }} <span class="text-muted fw-normal small">{{ cb.currency.code }}</span>
           </td>
         </tr>
         {% endfor %}
