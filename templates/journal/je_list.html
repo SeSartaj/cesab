@@ -1,49 +1,145 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% block title %}{% trans "Journal" %}{% endblock %}
+{% block title %}{% trans "Journal / Ledger" %}{% endblock %}
 {% block sidebar %}{% include "projects/_sidebar.html" with active="journal" %}{% endblock %}
 {% block main_class %}col-md-10{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h5><i class="bi bi-journal-text"></i> {% trans "Journal Entries" %} — {{ project.name }}</h5>
+  <h5><i class="bi bi-journal-text"></i>
+    {% if selected_account %}
+      {% trans "Ledger" %} — <span class="text-primary">{{ selected_account }}</span>
+    {% else %}
+      {% trans "Journal Entries" %} — {{ project.name }}
+    {% endif %}
+  </h5>
 </div>
 
 <!-- Filter form -->
 <form method="get" class="card mb-3">
-  <div class="card-body">
+  <div class="card-body pb-2">
     <div class="row g-2 align-items-end">
-      <div class="col-md-3">
-        <label class="form-label small">{% trans "From" %}</label>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold">{% trans "From" %}</label>
         <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request.GET.date_from }}">
       </div>
-      <div class="col-md-3">
-        <label class="form-label small">{% trans "To" %}</label>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold">{% trans "To" %}</label>
         <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request.GET.date_to }}">
       </div>
-      <div class="col-md-3">
-        <label class="form-label small">{% trans "Type" %}</label>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold">{% trans "Type" %}</label>
         <select name="tx_type" class="form-select form-select-sm">
-          <option value="">{% trans "All" %}</option>
+          <option value="">{% trans "All Types" %}</option>
           {% for code, label in tx_types %}
           <option value="{{ code }}" {% if request.GET.tx_type == code %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
       </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold">{% trans "Currency" %}</label>
+        <select name="currency" class="form-select form-select-sm">
+          <option value="">{% trans "All Currencies" %}</option>
+          {% for cur in currencies %}
+          <option value="{{ cur.pk }}" {% if selected_currency_id == cur.pk|stringformat:"s" %}selected{% endif %}>{{ cur.code }} — {{ cur.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
       <div class="col-md-3">
-        <button type="submit" class="btn btn-outline-primary btn-sm w-100">
-          <i class="bi bi-funnel"></i> {% trans "Filter" %}
-        </button>
+        <label class="form-label small fw-semibold">{% trans "Account / Ledger" %}</label>
+        <select name="account" class="form-select form-select-sm">
+          <option value="">{% trans "All Accounts" %}</option>
+          {% for acc in accounts %}
+          <option value="{{ acc.pk }}" {% if selected_account_id == acc.pk|stringformat:"s" %}selected{% endif %}>{{ acc }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-1">
+        <button type="submit" class="btn btn-outline-primary btn-sm w-100"><i class="bi bi-funnel"></i></button>
       </div>
     </div>
+    {% if selected_account %}
+    <div class="mt-2 text-muted small"><i class="bi bi-info-circle"></i> {% trans "Ledger mode: showing all movements for the selected account." %}
+      <a href="?{{ filter_qs_no_account }}" class="ms-2 text-danger">
+        — <i class="bi bi-x-circle"></i> {% trans "Clear account" %}
+      </a>
+    </div>
+    {% endif %}
   </div>
 </form>
 
+{% if selected_account and ledger_lines is not None %}
+<!-- ===== LEDGER MODE ===== -->
 <div class="card">
   <div class="card-body p-0">
-    <table class="table table-hover mb-0">
+    <table class="table table-sm table-hover mb-0 small">
+      <thead class="table-dark">
+        <tr>
+          <th>{% trans "Date" %}</th>
+          <th>{% trans "JE#" %}</th>
+          <th>{% trans "Type" %}</th>
+          <th>{% trans "Description" %}</th>
+          <th class="text-end">{% trans "Debit (BC)" %}</th>
+          <th class="text-end">{% trans "Credit (BC)" %}</th>
+          <th class="text-end">{% trans "Amount (TC)" %}</th>
+          <th class="text-center">{% trans "Cur." %}</th>
+          <th class="text-end">{% trans "Balance" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in ledger_lines %}
+        {% with line=row.line je=row.line.journal_entry %}
+        <tr>
+          <td class="text-nowrap">{{ je.date }}</td>
+          <td>
+            <a href="{% url 'projects:je_detail' project_pk=project.pk pk=je.pk %}" class="fw-semibold">
+              JE-{{ je.pk|stringformat:"04d" }}
+            </a>
+          </td>
+          <td><span class="badge bg-secondary">{{ je.get_transaction_type_display }}</span></td>
+          <td>{{ je.description|truncatechars:45 }}</td>
+          <td class="text-end {% if line.debit > 0 %}text-primary{% else %}text-muted{% endif %}">
+            {% if line.debit > 0 %}{{ line.debit|floatformat:2 }}{% else %}—{% endif %}
+          </td>
+          <td class="text-end {% if line.credit > 0 %}text-danger{% else %}text-muted{% endif %}">
+            {% if line.credit > 0 %}{{ line.credit|floatformat:2 }}{% else %}—{% endif %}
+          </td>
+          <td class="text-end text-muted">
+            {% if line.debit_tc > 0 %}+{{ line.debit_tc|floatformat:2 }}{% elif line.credit_tc > 0 %}-{{ line.credit_tc|floatformat:2 }}{% else %}—{% endif %}
+          </td>
+          <td class="text-center">{{ line.transaction_currency.code }}</td>
+          <td class="text-end fw-semibold {% if row.running >= 0 %}text-success{% else %}text-danger{% endif %}">
+            {{ row.running|floatformat:2 }}
+          </td>
+        </tr>
+        {% endwith %}
+        {% empty %}
+        <tr><td colspan="9" class="text-center text-muted py-4">{% trans "No movements found for this account." %}</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="table-dark fw-bold">
+        <tr>
+          <td colspan="4" class="text-end">{% trans "Total" %}</td>
+          <td class="text-end text-primary">{{ ledger_total_debit|floatformat:2 }}</td>
+          <td class="text-end text-danger">{{ ledger_total_credit|floatformat:2 }}</td>
+          <td colspan="2"></td>
+          <td class="text-end {% if ledger_balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+            {{ ledger_balance|floatformat:2 }}
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+{% else %}
+<!-- ===== JOURNAL MODE ===== -->
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0 small">
       <thead class="table-light">
         <tr>
           <th>{% trans "Date" %}</th>
+          <th>{% trans "JE#" %}</th>
           <th>{% trans "Type" %}</th>
           <th>{% trans "Description" %}</th>
           <th>{% trans "Ref" %}</th>
@@ -55,18 +151,31 @@
       <tbody>
         {% for je in entries %}
         <tr>
-          <td>{{ je.date }}</td>
-          <td><span class="badge bg-secondary small">{{ je.transaction_type }}</span></td>
-          <td><a href="{% url 'projects:je_detail' project_pk=project.pk pk=je.pk %}">{{ je.description|truncatechars:50 }}</a></td>
-          <td>{{ je.reference|default:"-" }}</td>
+          <td class="text-nowrap">{{ je.date }}</td>
+          <td><a href="{% url 'projects:je_detail' project_pk=project.pk pk=je.pk %}" class="fw-semibold">JE-{{ je.pk|stringformat:"04d" }}</a></td>
+          <td><span class="badge bg-secondary">{{ je.get_transaction_type_display }}</span></td>
+          <td>{{ je.description|truncatechars:50 }}</td>
+          <td class="text-muted">{{ je.reference|default:"—" }}</td>
           <td class="text-end">{{ je.total_debit|floatformat:2 }}</td>
           <td class="text-end">{{ je.total_credit|floatformat:2 }}</td>
-          <td>{{ je.created_by.username|default:"-" }}</td>
+          <td class="text-muted small">{{ je.created_by.username|default:"—" }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="7" class="text-center text-muted py-4">{% trans "No journal entries found." %}</td></tr>
+        <tr><td colspan="8" class="text-center text-muted py-4">{% trans "No journal entries found." %}</td></tr>
         {% endfor %}
       </tbody>
+      {% if entries %}
+      <tfoot class="table-light fw-bold">
+        <tr>
+          <td colspan="5" class="text-end text-muted small">
+            {% trans "Totals (all filtered, all pages)" %}
+          </td>
+          <td class="text-end text-primary">{{ total_debit|floatformat:2 }}</td>
+          <td class="text-end text-danger">{{ total_credit|floatformat:2 }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+      {% endif %}
     </table>
   </div>
 </div>
@@ -76,13 +185,16 @@
 <nav class="mt-3">
   <ul class="pagination pagination-sm justify-content-center">
     {% if page_obj.has_previous %}
-    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}{% if request.GET.tx_type %}&tx_type={{ request.GET.tx_type }}{% endif %}">«</a></li>
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if filter_qs %}&{{ filter_qs }}{% endif %}">«</a></li>
     {% endif %}
     <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
     {% if page_obj.has_next %}
-    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}{% if request.GET.tx_type %}&tx_type={{ request.GET.tx_type }}{% endif %}">»</a></li>
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if filter_qs %}&{{ filter_qs }}{% endif %}">»</a></li>
     {% endif %}
   </ul>
 </nav>
 {% endif %}
+{% endif %}
+
 {% endblock %}
+

@@ -37,7 +37,7 @@ class Account(models.Model):
 
     def balance(self):
         from journal.models import JournalLine
-        lines = JournalLine.objects.filter(account=self)
+        lines = JournalLine.objects.active().filter(account=self)
         total_debit = sum(l.debit for l in lines)
         total_credit = sum(l.credit for l in lines)
         if self.account_type in ("asset", "expense"):

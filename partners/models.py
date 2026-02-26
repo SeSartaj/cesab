@@ -36,7 +36,7 @@ class ProjectPartner(models.Model):
 
     def contributed_amount(self):
         from journal.models import JournalLine
-        lines = JournalLine.objects.filter(account=self.capital_account)
+        lines = JournalLine.objects.active().filter(account=self.capital_account)
         return sum(l.credit for l in lines)
 
     def remaining_commitment(self):

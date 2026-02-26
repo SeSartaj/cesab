@@ -10,7 +10,7 @@
 - when adding to cashbox, filter the cashbox select, so only the cashboxes which have the same currency as transaction currency are displayed. (--)
 
 
--there is a bug. when currency is USD, and i choose cashbox which is AFN, then to the cashbox it should be added the changed currency. for example, if cashbox is AFN, and the transaction is in USD, 1000 usd is added at exchange rate of 64, then the cashbox should have 64000 in it. 
+
 - with each cashbox, show its currency as well. 
 
 
@@ -21,4 +21,11 @@
 - remove direct payment button from vendor detail page. 
 - show total amount paid to a vendor 
 - when creating a project, automatically creat two cashboxes called (دخل مرکزی - افغانی) and (دخل مرکزی - دالری). 
+
+
+# clients requests
+-there is a bug. when currency is USD, and i choose cashbox which is AFN, then to the cashbox it should be added the changed currency. for example, if cashbox is AFN, and the transaction is in USD, 1000 usd is added at exchange rate of 64, then the cashbox should have 64000 in it. so far i expereinced this in adding capital or income
+- enhance filter of the journal. add filter based on currency of transaction, users in chart of accounts. at the end of journal list, show total as well. meaning, i should be able to get ledgers by filtering based on users. make it something usefull as a senior accountant. 
+- improve the single vendor page. show amount paid and some other important data as well. keep it minimal. 
+- create a single cashbox detail page. in it i should be able to see all cash flow. keep minimal info, decide as a senior accountant. 
 - 

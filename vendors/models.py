@@ -29,10 +29,10 @@ class Vendor(models.Model):
 
     def balance_payable(self):
         from journal.models import JournalLine
-        lines = JournalLine.objects.filter(account=self.payable_account)
+        lines = JournalLine.objects.active().filter(account=self.payable_account)
         return sum(l.credit for l in lines) - sum(l.debit for l in lines)
 
     def advance_balance(self):
         from journal.models import JournalLine
-        lines = JournalLine.objects.filter(account=self.advance_account)
+        lines = JournalLine.objects.active().filter(account=self.advance_account)
         return sum(l.debit for l in lines) - sum(l.credit for l in lines)

@@ -25,11 +25,11 @@ class Cashbox(models.Model):
 
     def balance(self):
         from journal.models import JournalLine
-        lines = JournalLine.objects.filter(account=self.account)
+        lines = JournalLine.objects.active().filter(account=self.account)
         return sum(l.debit for l in lines) - sum(l.credit for l in lines)
 
     def balance_in_currency(self):
         """Balance expressed in the cashbox's own currency (transaction currency)."""
         from journal.models import JournalLine
-        lines = JournalLine.objects.filter(account=self.account)
+        lines = JournalLine.objects.active().filter(account=self.account)
         return sum(l.debit_tc for l in lines) - sum(l.credit_tc for l in lines)

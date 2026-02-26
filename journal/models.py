@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.db.models import Exists, OuterRef
 from decimal import Decimal
 
 
@@ -67,7 +68,25 @@ class JournalEntry(models.Model):
         return self.total_debit() == self.total_credit()
 
 
+class JournalLineQuerySet(models.QuerySet):
+    def active(self):
+        """
+        Exclude journal lines that belong to:
+        - correction entries (entries that reverse another entry)
+        - entries that have been corrected/voided (entries that a correction points at)
+        Together these pairs net to zero economic activity and should not
+        appear in reports or balance calculations.
+        """
+        is_corrected = Exists(
+            JournalEntry.objects.filter(corrects_id=OuterRef("journal_entry_id"))
+        )
+        return self.filter(
+            journal_entry__corrects__isnull=True,   # not itself a correction
+        ).exclude(is_corrected)                      # not been corrected by another entry
+
+
 class JournalLine(models.Model):
+    objects = JournalLineQuerySet.as_manager()
     journal_entry = models.ForeignKey(
         "journal.JournalEntry", on_delete=models.CASCADE,
         related_name="lines", verbose_name=_("Journal Entry")

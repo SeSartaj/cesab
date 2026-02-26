@@ -5,31 +5,77 @@
 {% block main_class %}col-md-10{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h5><i class="bi bi-truck"></i> {{ vendor.name }}</h5>
+  <h5><i class="bi bi-truck"></i> {{ vendor.name }}
+    {% if vendor.phone %}<small class="text-muted fs-6 ms-2">{{ vendor.phone }}</small>{% endif %}
+  </h5>
   <a href="{% url 'projects:vendors' project_pk=project.pk %}" class="btn btn-sm btn-outline-secondary">
     <i class="bi bi-arrow-left"></i> {% trans "Back" %}
   </a>
 </div>
-<div class="row g-3 mb-4">
-  <div class="col-md-3">
-    <div class="card text-center">
-      <div class="card-body">
-        <div class="text-muted small">{% trans "Payable Balance" %}</div>
-        <div class="fs-4 fw-bold {% if vendor.balance_payable > 0 %}text-danger{% else %}text-success{% endif %}">
-          {{ vendor.balance_payable|floatformat:2 }}
-        </div>
+
+<!-- Summary Cards -->
+<div class="row g-2 mb-4">
+  <div class="col-md-2">
+    <div class="card text-center border-0 bg-light">
+      <div class="card-body py-2">
+        <div class="text-muted small">{% trans "Total Billed" %}</div>
+        <div class="fs-5 fw-bold text-dark">{{ total_billed|floatformat:0 }}</div>
       </div>
     </div>
   </div>
-  <div class="col-md-3">
-    <div class="card text-center">
-      <div class="card-body">
-        <div class="text-muted small">{% trans "Advance Balance" %}</div>
-        <div class="fs-4 fw-bold text-info">{{ vendor.advance_balance|floatformat:2 }}</div>
+  <div class="col-md-2">
+    <div class="card text-center border-0 bg-light">
+      <div class="card-body py-2">
+        <div class="text-muted small">{% trans "Paid on Bills" %}</div>
+        <div class="fs-5 fw-bold text-success">{{ total_paid|floatformat:0 }}</div>
+      </div>
+    </div>
+  </div>
+  {% if total_refunded %}
+  <div class="col-md-2">
+    <div class="card text-center border-0 bg-light">
+      <div class="card-body py-2">
+        <div class="text-muted small">{% trans "Refunded" %}</div>
+        <div class="fs-5 fw-bold text-warning">{{ total_refunded|floatformat:0 }}</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  <div class="col-md-2">
+    <div class="card text-center border-0 {% if net_payable > 0 %}bg-danger bg-opacity-10{% else %}bg-success bg-opacity-10{% endif %}">
+      <div class="card-body py-2">
+        <div class="text-muted small">{% trans "Outstanding Payable" %}</div>
+        <div class="fs-5 fw-bold {% if net_payable > 0 %}text-danger{% else %}text-success{% endif %}">{{ net_payable|floatformat:0 }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card text-center border-0 bg-light">
+      <div class="card-body py-2">
+        <div class="text-muted small">{% trans "Advances Paid" %}</div>
+        <div class="fs-5 fw-bold text-info">{{ total_advances|floatformat:0 }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card text-center border-0 bg-light">
+      <div class="card-body py-2">
+        <div class="text-muted small">{% trans "Advances Settled" %}</div>
+        <div class="fs-5 fw-bold text-muted">{{ total_settled|floatformat:0 }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card text-center border-0 {% if net_due > 0 %}border-danger{% else %}border-success{% endif %} border-2">
+      <div class="card-body py-2">
+        <div class="text-muted small fw-bold">{% trans "Net Due" %}</div>
+        <div class="fs-5 fw-bold {% if net_due > 0 %}text-danger{% else %}text-success{% endif %}">{{ net_due|floatformat:0 }}</div>
+        <div class="text-muted" style="font-size:.65rem;">{% trans "payable − advance" %}</div>
       </div>
     </div>
   </div>
 </div>
+
 {% if request.user.can_edit %}
 <div class="d-flex flex-wrap gap-2 mb-4">
   <a href="{% url 'projects:vendor_bill' project_pk=project.pk %}?vendor={{ vendor.pk }}" class="btn btn-outline-danger btn-sm">
@@ -44,24 +90,30 @@
   <a href="{% url 'projects:vendor_advance_settlement' project_pk=project.pk %}?vendor={{ vendor.pk }}" class="btn btn-outline-success btn-sm">
     <i class="bi bi-check2-circle"></i> {% trans "Advance Settlement" %}
   </a>
-  <a href="{% url 'projects:vendor_direct_payment' project_pk=project.pk %}?vendor={{ vendor.pk }}" class="btn btn-outline-dark btn-sm">
-    <i class="bi bi-send"></i> {% trans "Direct Payment" %}
-  </a>
   <a href="{% url 'projects:vendor_refund' project_pk=project.pk %}?vendor={{ vendor.pk }}" class="btn btn-outline-secondary btn-sm">
     <i class="bi bi-arrow-return-left"></i> {% trans "Vendor Refund" %}
   </a>
 </div>
 {% endif %}
 
-<!-- Vendor Transaction History -->
-{% if vendor_entries %}
+<!-- Transaction History -->
 <div class="card">
-  <div class="card-header"><i class="bi bi-clock-history"></i> {% trans "Transaction History" %}</div>
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-clock-history"></i> {% trans "Transaction History" %}
+      <small class="text-muted">({% trans "last 20" %})</small>
+    </span>
+    <a href="{% url 'projects:journal' project_pk=project.pk %}?account={{ vendor.payable_account.pk }}"
+       class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-journal-text"></i> {% trans "Full Payable Ledger" %}
+    </a>
+  </div>
+  {% if vendor_entries %}
   <div class="card-body p-0">
-    <table class="table table-sm table-hover mb-0">
+    <table class="table table-sm table-hover mb-0 small">
       <thead class="table-light">
         <tr>
           <th>{% trans "Date" %}</th>
+          <th>{% trans "JE#" %}</th>
           <th>{% trans "Type" %}</th>
           <th>{% trans "Description" %}</th>
           <th class="text-end">{% trans "Amount" %}</th>
@@ -71,12 +123,14 @@
       <tbody>
         {% for je in vendor_entries %}
         <tr>
-          <td>{{ je.date }}</td>
+          <td class="text-nowrap">{{ je.date }}</td>
+          <td class="fw-semibold">JE-{{ je.pk|stringformat:"04d" }}</td>
           <td><span class="badge bg-secondary">{{ je.get_transaction_type_display }}</span></td>
-          <td>{{ je.description|truncatechars:45 }}</td>
+          <td>{{ je.description|truncatechars:50 }}</td>
           <td class="text-end">{{ je.total_debit|floatformat:2 }}</td>
           <td>
-            <a href="{% url 'projects:je_detail' project_pk=project.pk pk=je.pk %}" class="btn btn-sm btn-outline-secondary py-0 px-1">
+            <a href="{% url 'projects:je_detail' project_pk=project.pk pk=je.pk %}"
+               class="btn btn-sm btn-outline-secondary py-0 px-1">
               <i class="bi bi-eye"></i>
             </a>
           </td>
@@ -85,8 +139,11 @@
       </tbody>
     </table>
   </div>
+  {% else %}
+  <div class="card-body text-center text-muted py-4">
+    <i class="bi bi-inbox fs-3 d-block mb-1"></i>{% trans "No transactions recorded yet." %}
+  </div>
+  {% endif %}
 </div>
-{% else %}
-<p class="text-muted text-center py-3"><i class="bi bi-inbox fs-3 d-block mb-1"></i>{% trans "No transactions recorded yet." %}</p>
-{% endif %}
 {% endblock %}
+

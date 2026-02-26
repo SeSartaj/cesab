@@ -13,21 +13,25 @@
   {% endif %}
 </div>
 <div class="row g-3">
-  {% for cb, bal in cashbox_data %}
+  {% for cb, bal, bal_bc in cashbox_data %}
   <div class="col-md-4">
-    <div class="card text-center">
+    <a href="{% url 'projects:cashbox_detail' project_pk=project.pk pk=cb.pk %}" class="text-decoration-none">
+    <div class="card text-center h-100">
       <div class="card-body">
         <i class="bi bi-safe2 display-5 text-primary"></i>
-        <h5 class="mt-2">{{ cb.name }}</h5>
-        <div class="text-muted small">{{ cb.currency.code }}</div>
-        {% with cb_bal=cb.balance_in_currency %}
-        <div class="display-6 mt-2 fw-bold {% if cb_bal >= 0 %}text-success{% else %}text-danger{% endif %}">
-          {{ cb_bal|floatformat:2 }}
+        <h5 class="mt-2 text-body">{{ cb.name }}</h5>
+        <div class="text-muted small mb-1">{{ cb.currency.code }}</div>
+        <div class="display-6 mt-2 fw-bold {% if bal >= 0 %}text-success{% else %}text-danger{% endif %}">
+          {{ bal|floatformat:2 }}
         </div>
-        <div class="text-muted small">{{ cb.currency.code }}</div>
-        {% endwith %}
+        <div class="text-muted small">{{ cb.currency.code }}
+          {% if cb.currency.code != project.base_currency.code %}
+          &nbsp;&middot;&nbsp;≈ {{ bal_bc|floatformat:0 }} {{ project.base_currency.code }}
+          {% endif %}
+        </div>
       </div>
     </div>
+    </a>
   </div>
   {% empty %}
   <div class="col"><p class="text-muted text-center py-4">{% trans "No cashboxes yet." %}</p></div>

@@ -194,7 +194,7 @@ def record_partner_inventory_contribution(project, user, date, item, quantity, u
 
     je = _create_je(
         project, user, date,
-        description or f"Partner inventory contribution: {project_partner.partner.name} — {item.name} x {quantity}",
+        description or f"Partner inventory contribution: {project_partner.name} — {item.name} x {quantity}",
         "partner_inventory_contribution",
     )
     _add_line(je, item.inventory_account, debit=qty * cost, currency=currency, exchange_rate=exchange_rate)

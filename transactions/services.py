@@ -55,7 +55,7 @@ def capital_contribution(project, user, date, project_partner, amount,
     Cr. Partner Capital Account
     """
     currency = currency or project.base_currency
-    je = _create_je(project, user, date, description or f"Capital contribution by {project_partner.partner.name}",
+    je = _create_je(project, user, date, description or f"Capital contribution by {project_partner.name}",
                     "capital_contribution")
     _add_line(je, cashbox.account, debit=amount, currency=currency, exchange_rate=exchange_rate)
     _add_line(je, project_partner.capital_account, credit=amount, currency=currency, exchange_rate=exchange_rate)
@@ -71,7 +71,7 @@ def shareholder_withdrawal(project, user, date, project_partner, amount,
     """
     currency = currency or project.base_currency
     _check_cashbox_balance(cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
-    je = _create_je(project, user, date, description or f"Withdrawal by {project_partner.partner.name}",
+    je = _create_je(project, user, date, description or f"Withdrawal by {project_partner.name}",
                     "shareholder_withdrawal")
     _add_line(je, project_partner.current_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
     _add_line(je, cashbox.account, credit=amount, currency=currency, exchange_rate=exchange_rate)
@@ -113,13 +113,14 @@ def vendor_payment_against_bill(project, user, date, vendor, amount, cashbox,
                                 description="", currency=None, exchange_rate=1):
     """
     Payment against vendor bill.
-    The payable is always reduced at the weighted-average rate of the outstanding
-    payable balance (i.e. the original bill rate). Any difference between that
-    and the current payment rate goes to FX Gain or FX Loss.
+    The payable is reduced by the BC value of what's actually paid.
+    When the payable is in a FOREIGN currency (e.g. bill was recorded in USD),
+    any difference between the booking rate and the payment rate goes to FX Gain/Loss.
+    When the payable is in BASE currency, there is no FX difference.
 
-    Dr. Vendor Payable Account   (at weighted-average bill rate)
-    Dr. FX Loss Account          (when payment rate > bill rate — we pay more)
-    Cr. FX Gain Account          (when payment rate < bill rate — we pay less)
+    Dr. Vendor Payable Account   (BC equivalent, at booking rate if foreign)
+    Dr. FX Loss Account          (only when bill was in foreign currency and rate moved against us)
+    Cr. FX Gain Account          (only when bill was in foreign currency and rate moved in our favour)
     Cr. Cashbox Account          (at current payment rate)
     """
     from coa.services import get_or_create_fx_accounts
@@ -129,13 +130,16 @@ def vendor_payment_against_bill(project, user, date, vendor, amount, cashbox,
     payment_rate = Decimal(str(exchange_rate))
     amount_tc = Decimal(str(amount))
 
-    # Weighted-average rate of the outstanding payable (= original bill rate)
-    # Only relevant when a foreign currency is involved (payment_rate != 1).
-    bill_rate = payment_rate  # default: no FX difference
-    fx_diff = Decimal("0")
+    # BC amount actually leaving the cashbox
+    cashbox_bc = (amount_tc * payment_rate).quantize(Decimal("0.01"))
+
+    bill_rate = Decimal("1")
+    fx_diff   = Decimal("0")
+    payable_in_foreign = False  # whether the outstanding payable is in a foreign currency
 
     if payment_rate != Decimal("1"):
-        agg = JournalLine.objects.filter(account=vendor.payable_account).aggregate(
+        # Only need to look up bill rate when the payment is in a foreign currency
+        agg = JournalLine.objects.active().filter(account=vendor.payable_account).aggregate(
             bc_credit=Sum("credit"),
             bc_debit=Sum("debit"),
             tc_credit=Sum("credit_tc"),
@@ -144,30 +148,34 @@ def vendor_payment_against_bill(project, user, date, vendor, amount, cashbox,
         outstanding_bc = (agg["bc_credit"] or Decimal("0")) - (agg["bc_debit"] or Decimal("0"))
         outstanding_tc = (agg["tc_credit"] or Decimal("0")) - (agg["tc_debit"] or Decimal("0"))
 
-        if outstanding_tc > Decimal("0"):
+        # If bc != tc the payable was booked in a foreign currency — compute FX diff
+        if outstanding_tc > Decimal("0") and abs(outstanding_bc - outstanding_tc) > Decimal("0.01"):
+            payable_in_foreign = True
             bill_rate = (outstanding_bc / outstanding_tc).quantize(Decimal("0.000001"))
+            payable_debit_bc = (amount_tc * bill_rate).quantize(Decimal("0.01"))
+            fx_diff = payable_debit_bc - cashbox_bc  # >0 = gain, <0 = loss
 
-        payable_debit_bc = (amount_tc * bill_rate).quantize(Decimal("0.01"))
-        cashbox_credit_bc = (amount_tc * payment_rate).quantize(Decimal("0.01"))
-        fx_diff = payable_debit_bc - cashbox_credit_bc  # >0 = gain, <0 = loss
-
-    _check_cashbox_balance(cashbox, (amount_tc * payment_rate).quantize(Decimal("0.01")))
+    _check_cashbox_balance(cashbox, cashbox_bc)
 
     je = _create_je(project, user, date, description or f"Payment to {vendor.name}",
                     "vendor_payment")
 
-    # Reduce payable at the original bill rate
-    _add_line(je, vendor.payable_account, debit=amount_tc, currency=currency, exchange_rate=bill_rate)
+    # Reduce payable
+    if payable_in_foreign:
+        # Bill was in a foreign currency: debit payable at the original booking rate (in TC)
+        _add_line(je, vendor.payable_account, debit=amount_tc, currency=currency, exchange_rate=bill_rate)
+    else:
+        # Bill was in base currency: simply debit the exact BC amount being paid
+        _add_line(je, vendor.payable_account, debit=cashbox_bc,
+                  currency=project.base_currency, exchange_rate=1)
 
-    # Book exchange difference if any
+    # Book exchange difference if any (only for foreign-currency payables)
     if fx_diff != Decimal("0"):
         gain_acc, loss_acc = get_or_create_fx_accounts(project)
         if fx_diff > 0:
-            # We owe more (BC) than we actually pay → FX Gain
             _add_line(je, gain_acc, credit=fx_diff,
                       currency=project.base_currency, exchange_rate=1)
         else:
-            # We pay more (BC) than the book value of the payable → FX Loss
             _add_line(je, loss_acc, debit=-fx_diff,
                       currency=project.base_currency, exchange_rate=1)
 
@@ -360,8 +368,13 @@ def create_correction_entry(original_je, user, description=""):
     Create a counter-balancing correction entry that reverses the original.
     All debits become credits and vice versa.
     Users can never delete journal entries — they can only correct them.
+    Raises ValueError if the entry is already a correction or has already been corrected.
     """
     from django.utils import timezone
+    if original_je.corrects_id is not None:
+        raise ValueError("A correction entry cannot itself be corrected.")
+    if original_je.corrections.exists():
+        raise ValueError("This entry has already been corrected and cannot be corrected again.")
     project = original_je.project
     je = JournalEntry.objects.create(
         project=project,
