@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from journal.models import JournalEntry, JournalLine
 from .models import InventoryItem, InventoryMovement
+from projects.permissions import assert_can_do_accounting
 
 
 def _create_je(project, user, date, description, transaction_type):
@@ -45,6 +46,7 @@ def record_inventory_purchase(project, user, date, item, quantity, unit_cost,
     Dr. Inventory Asset Account
     Cr. Cashbox Account
     """
+    assert_can_do_accounting(user, project)
     currency = currency or project.base_currency
     rate = Decimal(str(exchange_rate))
     qty = Decimal(str(quantity))
@@ -80,6 +82,7 @@ def record_inventory_purchase_on_credit(project, user, date, item, quantity, uni
     Dr. Inventory Asset Account
     Cr. Vendor Payable Account
     """
+    assert_can_do_accounting(user, project)
     currency = currency or project.base_currency
     rate = Decimal(str(exchange_rate))
     qty = Decimal(str(quantity))
@@ -114,6 +117,7 @@ def record_inventory_consumption(project, user, date, item, quantity, descriptio
     Dr. Expense Account
     Cr. Inventory Asset Account
     """
+    assert_can_do_accounting(user, project)
     qty = Decimal(str(quantity))
     cost = item.weighted_average_cost()
     total = (qty * cost).quantize(Decimal("0.01"))
@@ -147,6 +151,7 @@ def record_inventory_adjustment(project, user, date, item, quantity, unit_cost,
     Increase: Dr. Inventory Account
     Decrease: Dr. Expense Account  Cr. Inventory Account
     """
+    assert_can_do_accounting(user, project)
     qty = Decimal(str(quantity))
     cost = Decimal(str(unit_cost))
     total = (qty * cost).quantize(Decimal("0.01"))
@@ -186,6 +191,7 @@ def record_partner_inventory_contribution(project, user, date, item, quantity, u
     Dr. Inventory Asset Account
     Cr. Partner Capital Account
     """
+    assert_can_do_accounting(user, project)
     currency = currency or project.base_currency
     rate = Decimal(str(exchange_rate))
     qty = Decimal(str(quantity))
@@ -215,8 +221,9 @@ def record_partner_inventory_contribution(project, user, date, item, quantity, u
 
 
 @db_transaction.atomic
-def create_inventory_item(project, name, unit, inventory_account=None, expense_account=None):
-    """Create a new inventory item, auto-creating accounts if not provided."""
+def create_inventory_item(project, user, name, unit, inventory_account=None, expense_account=None):
+    """Create a new inventory item, auto-creating accounts if not provided. Requires accounting permission."""
+    assert_can_do_accounting(user, project)
     from coa.services import create_inventory_accounts
     if inventory_account is None or expense_account is None:
         inv_acc, exp_acc = create_inventory_accounts(project, name)

@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
 from projects.models import Project
+from projects.permissions import require_accounting
 from cash.models import Cashbox
 from coa.models import Account
 from journal.models import JournalEntry, JournalLine
@@ -14,11 +15,8 @@ import transactions.services as svc
 from . import forms as tx_forms
 
 
-def _require_edit(request, project_pk):
-    if not request.user.can_edit:
-        messages.error(request, _("You do not have permission."))
-        return redirect("projects:dashboard", pk=project_pk)
-    return None
+def _require_accounting(request, project):
+    return require_accounting(request, project)
 
 
 def _dash_redirect(project_pk):
@@ -28,7 +26,7 @@ def _dash_redirect(project_pk):
 @login_required
 def capital_contribution(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_edit(request, project_pk)
+    denied = _require_accounting(request, project)
     if denied:
         return denied
 
@@ -61,7 +59,7 @@ def capital_contribution(request, project_pk):
 @login_required
 def shareholder_withdrawal(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_edit(request, project_pk)
+    denied = _require_accounting(request, project)
     if denied:
         return denied
 
@@ -97,7 +95,7 @@ def shareholder_withdrawal(request, project_pk):
 @login_required
 def vendor_bill(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_edit(request, project_pk)
+    denied = _require_accounting(request, project)
     if denied:
         return denied
 
@@ -139,7 +137,7 @@ def vendor_bill(request, project_pk):
 @login_required
 def vendor_advance(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_edit(request, project_pk)
+    denied = _require_accounting(request, project)
     if denied:
         return denied
 
@@ -175,7 +173,7 @@ def vendor_advance(request, project_pk):
 @login_required
 def vendor_payment(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_edit(request, project_pk)
+    denied = _require_accounting(request, project)
     if denied:
         return denied
 
@@ -211,7 +209,7 @@ def vendor_payment(request, project_pk):
 @login_required
 def cash_expense(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_edit(request, project_pk)
+    denied = _require_accounting(request, project)
     if denied:
         return denied
 
@@ -244,7 +242,7 @@ def cash_expense(request, project_pk):
 @login_required
 def cashbox_transfer(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_edit(request, project_pk)
+    denied = _require_accounting(request, project)
     if denied:
         return denied
 
@@ -277,7 +275,7 @@ def cashbox_transfer(request, project_pk):
 @login_required
 def bank_deposit(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_edit(request, project_pk)
+    denied = _require_accounting(request, project)
     if denied:
         return denied
 
@@ -310,7 +308,7 @@ def bank_deposit(request, project_pk):
 @login_required
 def project_income(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_edit(request, project_pk)
+    denied = _require_accounting(request, project)
     if denied:
         return denied
 
@@ -340,7 +338,7 @@ def project_income(request, project_pk):
 @login_required
 def asset_purchase(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_edit(request, project_pk)
+    denied = _require_accounting(request, project)
     if denied:
         return denied
 
@@ -373,7 +371,7 @@ def asset_purchase(request, project_pk):
 @login_required
 def pay_salary(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_edit(request, project_pk)
+    denied = _require_accounting(request, project)
     if denied:
         return denied
 
@@ -406,7 +404,7 @@ def pay_salary(request, project_pk):
 @login_required
 def manual_je(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_edit(request, project_pk)
+    denied = _require_accounting(request, project)
     if denied:
         return denied
 
@@ -462,7 +460,7 @@ def manual_je(request, project_pk):
 @login_required
 def vendor_advance_settlement(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_edit(request, project_pk)
+    denied = _require_accounting(request, project)
     if denied:
         return denied
 
@@ -506,7 +504,7 @@ def vendor_advance_settlement(request, project_pk):
 @login_required
 def vendor_direct_payment(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_edit(request, project_pk)
+    denied = _require_accounting(request, project)
     if denied:
         return denied
 
@@ -551,7 +549,7 @@ def vendor_direct_payment(request, project_pk):
 @login_required
 def vendor_refund(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_edit(request, project_pk)
+    denied = _require_accounting(request, project)
     if denied:
         return denied
 

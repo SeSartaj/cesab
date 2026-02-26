@@ -1,6 +1,6 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
-from .models import Project
+from .models import Project, ProjectMember
 from core.models import Currency
 
 
@@ -20,3 +20,16 @@ class ProjectForm(forms.ModelForm):
         self.fields["base_currency"].queryset = Currency.objects.filter(is_active=True)
         self.fields["description"].required = False
         self.fields["start_date"].required = False
+
+
+class InviteMemberForm(forms.Form):
+    username = forms.CharField(
+        max_length=150,
+        label=_("Username"),
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": _("Enter username to search")}),
+    )
+    role = forms.ChoiceField(
+        choices=[c for c in ProjectMember.ROLE_CHOICES if c[0] != "admin"],
+        label=_("Role"),
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )

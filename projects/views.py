@@ -9,20 +9,19 @@ from django.db.models import Q
 from decimal import Decimal
 
 from .models import Project, ProjectMember
-from .services import create_project
-from .forms import ProjectForm
+from .services import create_project, add_member, remove_member
+from .permissions import get_role, require_admin
+from .forms import ProjectForm, InviteMemberForm
 from partners.models import ProjectPartner
 from cash.models import Cashbox
 from journal.models import JournalEntry
 from coa.models import Account
 
 
+# ─── Queryset helper ────────────────────────────────────────────────────────
+
 def _accessible_projects(user):
-    """Return projects visible to this user.
-    - Superusers see all projects.
-    - Accountant-group users see projects they are a ProjectMember of.
-    - Partner users see projects where their ProjectPartner.user == them.
-    """
+    """Return projects visible to this user (any role or partner)."""
     if user.is_superuser:
         return Project.objects.filter(is_active=True)
     qs = Project.objects.filter(is_active=True)
@@ -46,12 +45,6 @@ class ProjectCreateView(LoginRequiredMixin, CreateView):
     form_class = ProjectForm
     template_name = "projects/project_form.html"
 
-    def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_superuser:
-            messages.error(request, _("Only superusers can create projects."))
-            return redirect("projects:list")
-        return super().dispatch(request, *args, **kwargs)
-
     def form_valid(self, form):
         data = form.cleaned_data
         project = create_project(
@@ -59,6 +52,7 @@ class ProjectCreateView(LoginRequiredMixin, CreateView):
             base_currency=data["base_currency"],
             description=data.get("description", ""),
             start_date=data.get("start_date"),
+            created_by=self.request.user,
         )
         messages.success(self.request, _("Project created successfully."))
         return redirect("projects:dashboard", pk=project.pk)
@@ -97,6 +91,8 @@ def project_dashboard(request, pk):
         if not (is_member or is_partner):
             messages.error(request, _("You do not have access to this project."))
             return redirect("projects:list")
+
+    user_role = get_role(request.user, project)
 
     # Partner summary - return as tuples (pp, contributed, remaining, percent_done)
     partners = project.project_partners.filter(is_active=True).select_related(
@@ -138,4 +134,90 @@ def project_dashboard(request, pk):
         "net_profit": total_income - total_expense,
         "total_payables": total_payables,
         "recent_entries": recent_entries,
+        "user_role": user_role,
+        "is_project_admin": user_role == "admin",
+        "can_do_accounting": user_role in ("admin", "accountant"),
+    })
+
+
+# ─── Member Management ──────────────────────────────────────────────────────
+
+@login_required
+def manage_members(request, pk):
+    """List project members and allow the project admin to invite/remove members."""
+    project = get_object_or_404(Project, pk=pk)
+
+    denied = require_admin(request, project)
+    if denied:
+        return denied
+
+    members = project.members.select_related("user").order_by("role", "user__username")
+    form = InviteMemberForm()
+    found_user = None
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "search":
+            form = InviteMemberForm(request.POST)
+            if form.is_valid():
+                username = form.cleaned_data["username"].strip()
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                try:
+                    found_user = User.objects.get(username=username)
+                    if project.members.filter(user=found_user).exists():
+                        messages.warning(
+                            request,
+                            _("%(username)s is already a member of this project.") % {"username": username},
+                        )
+                        found_user = None
+                except User.DoesNotExist:
+                    messages.error(
+                        request,
+                        _('No user found with username "%(username)s".') % {"username": username},
+                    )
+
+        elif action == "add":
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            user_id = request.POST.get("user_id")
+            role = request.POST.get("role", "viewer")
+            try:
+                target_user = User.objects.get(pk=user_id)
+                pm, created = add_member(project, request.user, target_user, role)
+                if created:
+                    messages.success(
+                        request,
+                        _("%(username)s added to the project as %(role)s.")
+                        % {"username": target_user.username, "role": role},
+                    )
+                else:
+                    messages.warning(request, _("User is already a member."))
+            except User.DoesNotExist:
+                messages.error(request, _("User not found."))
+            except Exception as exc:
+                messages.error(request, str(exc))
+            return redirect("projects:manage_members", pk=pk)
+
+        elif action == "remove":
+            member_id = request.POST.get("member_id")
+            member = get_object_or_404(ProjectMember, pk=member_id, project=project)
+            try:
+                username = member.user.username
+                remove_member(project, request.user, member)
+                messages.success(
+                    request,
+                    _("%(username)s has been removed from the project.") % {"username": username},
+                )
+            except ValueError as exc:
+                messages.error(request, str(exc))
+            return redirect("projects:manage_members", pk=pk)
+
+    return render(request, "projects/members.html", {
+        "project": project,
+        "members": members,
+        "form": form,
+        "found_user": found_user,
+        "user_role": "admin",
     })

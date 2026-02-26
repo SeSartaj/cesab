@@ -11,6 +11,7 @@ from decimal import Decimal
 import urllib.parse
 
 from projects.models import Project
+from projects.permissions import require_accounting
 from coa.models import Account
 from core.models import Currency
 from .models import JournalEntry, JournalLine, TRANSACTION_TYPES
@@ -27,6 +28,7 @@ def journal_list(request, project_pk):
     date_to    = request.GET.get("date_to", "")
     currency_id = request.GET.get("currency", "")
     account_id  = request.GET.get("account", "")
+    search      = request.GET.get("search", "").strip()
 
     # --- Build JE queryset (used in both modes) ---
     qs = JournalEntry.objects.filter(project=project).select_related("created_by")
@@ -40,6 +42,8 @@ def journal_list(request, project_pk):
         qs = qs.filter(lines__transaction_currency_id=currency_id).distinct()
     if account_id:
         qs = qs.filter(lines__account_id=account_id).distinct()
+    if search:
+        qs = qs.filter(description__icontains=search)
 
     # --- Ledger mode (account selected) ---
     ledger_lines       = None
@@ -67,6 +71,8 @@ def journal_list(request, project_pk):
                 line_qs = line_qs.filter(journal_entry__transaction_type=tx_type)
             if currency_id:
                 line_qs = line_qs.filter(transaction_currency_id=currency_id)
+            if search:
+                line_qs = line_qs.filter(journal_entry__description__icontains=search)
 
             line_qs = line_qs.select_related(
                 "journal_entry", "journal_entry__created_by", "transaction_currency"
@@ -110,7 +116,7 @@ def journal_list(request, project_pk):
     accounts   = Account.objects.filter(project=project, is_active=True).order_by("code")
 
     # Build query strings that preserve filters (without 'page')
-    fdict = {k: request.GET[k] for k in ("date_from", "date_to", "tx_type", "currency", "account") if request.GET.get(k)}
+    fdict = {k: request.GET[k] for k in ("date_from", "date_to", "tx_type", "currency", "account", "search") if request.GET.get(k)}
     filter_qs = urllib.parse.urlencode(fdict)
     # Same but without 'account' — used by the "Clear account" link
     fdict_no_account = {k: v for k, v in fdict.items() if k != "account"}
@@ -135,6 +141,7 @@ def journal_list(request, project_pk):
         "total_credit":       total_credit,
         "filter_qs":          filter_qs,
         "filter_qs_no_account": filter_qs_no_account,
+        "search":             search,
         "title":              _("Journal / Ledger"),
     })
 
@@ -169,9 +176,9 @@ def create_correction(request, project_pk, je_pk):
     project = get_object_or_404(Project, pk=project_pk)
     original_je = get_object_or_404(JournalEntry, pk=je_pk, project=project)
 
-    if not request.user.can_edit:
-        messages.error(request, _("You do not have permission to perform this action."))
-        return redirect(reverse("projects:je_detail", kwargs={"project_pk": project_pk, "pk": je_pk}))
+    denied = require_accounting(request, project)
+    if denied:
+        return denied
 
     if request.method == "POST":
         description = request.POST.get("description", "").strip()

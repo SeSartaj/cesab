@@ -25,6 +25,7 @@ class Project(models.Model):
 class ProjectMember(models.Model):
     """Links a staff/accountant user to a project with an explicit role."""
     ROLE_CHOICES = [
+        ("admin", _("Admin")),
         ("accountant", _("Accountant")),
         ("viewer", _("Viewer")),
     ]

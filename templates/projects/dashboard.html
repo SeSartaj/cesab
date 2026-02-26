@@ -11,7 +11,7 @@
     <h4 class="mb-0">{{ project.name }}</h4>
     <small class="text-muted">{{ project.base_currency.code }} &bull; {{ project.start_date }}</small>
   </div>
-  {% if request.user.can_edit %}
+  {% if is_project_admin %}
   <a href="{% url 'projects:edit' pk=project.pk %}" class="btn btn-sm btn-outline-secondary">
     <i class="bi bi-pencil"></i> {% trans "Edit" %}
   </a>
@@ -62,7 +62,7 @@
 {% if cashbox_data %}
 <div class="card mb-4">
   <div class="card-header"><i class="bi bi-cash-stack"></i> {% trans "Cashboxes" %}
-    {% if request.user.can_edit %}
+    {% if can_do_accounting %}
     <a href="{% url 'projects:add_cashbox' project_pk=project.pk %}" class="btn btn-sm btn-light float-end">
       <i class="bi bi-plus"></i>
     </a>
@@ -93,7 +93,7 @@
 <div class="card mb-4" id="shareholders">
   <div class="card-header d-flex justify-content-between align-items-center">
     <span><i class="bi bi-people"></i> {% trans "Shareholders" %}</span>
-    {% if request.user.can_edit %}
+    {% if can_do_accounting %}
     <div class="d-flex gap-1">
       <a href="{% url 'projects:add_shareholder' project_pk=project.pk %}" class="btn btn-sm btn-light" title="{% trans 'Add Partner' %}">
         <i class="bi bi-person-plus"></i> {% trans "Add Partner" %}
@@ -142,7 +142,7 @@
   <div class="card-body text-center text-muted py-3">
     <i class="bi bi-people fs-3 d-block mb-2"></i>
     {% trans "No shareholders yet." %}
-    {% if request.user.can_edit %}
+    {% if can_do_accounting %}
     <br><a href="{% url 'projects:add_shareholder' project_pk=project.pk %}" class="btn btn-sm btn-primary mt-2">
       <i class="bi bi-person-plus"></i> {% trans "Add Partner" %}
     </a>
@@ -151,8 +151,54 @@
   {% endif %}
 </div>
 
+<!-- Members card (visible to project admin) -->
+{% if is_project_admin %}
+{% with members=project.members.all %}
+{% if members %}
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-person-lines-fill"></i> {% trans "Project Members" %}</span>
+    <a href="{% url 'projects:manage_members' pk=project.pk %}" class="btn btn-sm btn-light">
+      <i class="bi bi-pencil"></i> {% trans "Manage" %}
+    </a>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead class="table-light">
+        <tr><th>{% trans "User" %}</th><th>{% trans "Role" %}</th></tr>
+      </thead>
+      <tbody>
+        {% for m in members %}
+        <tr>
+          <td>{{ m.user.username }}{% if m.user.get_full_name %} <span class="text-muted small">({{ m.user.get_full_name }})</span>{% endif %}</td>
+          <td>
+            {% if m.role == "admin" %}<span class="badge bg-danger">{% trans "Admin" %}</span>
+            {% elif m.role == "accountant" %}<span class="badge bg-primary">{% trans "Accountant" %}</span>
+            {% else %}<span class="badge bg-secondary">{% trans "Viewer" %}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-person-lines-fill"></i> {% trans "Project Members" %}</span>
+    <a href="{% url 'projects:manage_members' pk=project.pk %}" class="btn btn-sm btn-primary">
+      <i class="bi bi-person-plus"></i> {% trans "Invite Members" %}
+    </a>
+  </div>
+  <div class="card-body text-center text-muted py-3">{% trans "No other members yet." %}</div>
+</div>
+{% endif %}
+{% endwith %}
+{% endif %}
+
 <!-- Transaction Types Grid -->
-{% if request.user.can_edit %}
+{% if can_do_accounting %}
 <div class="card mb-4">
   <div class="card-header"><i class="bi bi-lightning-charge"></i> {% trans "Record Transaction" %}</div>
   <div class="card-body">
@@ -237,14 +283,14 @@
           </div>
         </a>
       </div>
-      <div class="col-md-3 col-6">
+      <!-- <div class="col-md-3 col-6">
         <a href="{% url 'projects:bank_deposit' project_pk=project.pk %}" class="text-decoration-none">
           <div class="card tx-card text-center p-3 h-100">
             <i class="bi bi-bank fs-3 text-dark"></i>
             <div class="small mt-1">{% trans "Bank Deposit" %}</div>
           </div>
         </a>
-      </div>
+      </div> -->
       <div class="col-md-3 col-6">
         <a href="{% url 'projects:project_income' project_pk=project.pk %}" class="text-decoration-none">
           <div class="card tx-card text-center p-3 h-100">

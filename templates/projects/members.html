@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Members" %} – {{ project.name }}{% endblock %}
+
+{% block sidebar %}{% include "projects/_sidebar.html" with active="members" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0"><i class="bi bi-person-lines-fill"></i> {% trans "Project Members" %} – {{ project.name }}</h5>
+  <a href="{% url 'projects:dashboard' pk=project.pk %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> {% trans "Back to Dashboard" %}
+  </a>
+</div>
+
+{% if messages %}
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+    {{ msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+{% endif %}
+
+<!-- Invite a new member -->
+<div class="card mb-4">
+  <div class="card-header"><i class="bi bi-person-plus"></i> {% trans "Invite Member" %}</div>
+  <div class="card-body">
+    <form method="post" class="row g-2 align-items-end">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="search">
+      <div class="col-md-5">
+        <label class="form-label fw-semibold">{{ form.username.label }}</label>
+        {{ form.username }}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">{{ form.role.label }}</label>
+        {{ form.role }}
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="bi bi-search"></i> {% trans "Search" %}
+        </button>
+      </div>
+    </form>
+
+    {% if found_user %}
+    <hr>
+    <div class="alert alert-success d-flex align-items-center justify-content-between">
+      <div>
+        <i class="bi bi-person-check fs-5 me-2"></i>
+        <strong>{{ found_user.username }}</strong>
+        {% if found_user.get_full_name %}<span class="text-muted ms-1">({{ found_user.get_full_name }})</span>{% endif %}
+      </div>
+      <form method="post" class="d-flex gap-2 align-items-center">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        <input type="hidden" name="user_id" value="{{ found_user.pk }}">
+        <select name="role" class="form-select form-select-sm" style="width:auto;">
+          {% for val, label in form.fields.role.choices %}
+          <option value="{{ val }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-success btn-sm">
+          <i class="bi bi-plus-circle"></i> {% trans "Add to Project" %}
+        </button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Current members -->
+<div class="card">
+  <div class="card-header"><i class="bi bi-people"></i> {% trans "Current Members" %}</div>
+  {% if members %}
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>{% trans "Username" %}</th>
+          <th>{% trans "Full Name" %}</th>
+          <th>{% trans "Role" %}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for member in members %}
+        <tr>
+          <td><i class="bi bi-person"></i> {{ member.user.username }}</td>
+          <td class="text-muted">{{ member.user.get_full_name|default:"–" }}</td>
+          <td>
+            {% if member.role == "admin" %}
+              <span class="badge bg-danger">{% trans "Admin" %}</span>
+            {% elif member.role == "accountant" %}
+              <span class="badge bg-primary">{% trans "Accountant" %}</span>
+            {% else %}
+              <span class="badge bg-secondary">{% trans "Viewer" %}</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            {% if member.role != "admin" and member.user != request.user %}
+            <form method="post" class="d-inline" onsubmit="return confirm('{% trans "Remove this member?" %}')">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="remove">
+              <input type="hidden" name="member_id" value="{{ member.pk }}">
+              <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2">
+                <i class="bi bi-person-dash"></i> {% trans "Remove" %}
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-center text-muted">
+    <i class="bi bi-people fs-3 d-block mb-2"></i>
+    {% trans "No members yet." %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

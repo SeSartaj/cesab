@@ -8,6 +8,7 @@ urlpatterns = [
     path("new/", views.ProjectCreateView.as_view(), name="create"),
     path("<int:pk>/", views.project_dashboard, name="dashboard"),
     path("<int:pk>/edit/", views.ProjectUpdateView.as_view(), name="edit"),
+    path("<int:pk>/members/", views.manage_members, name="manage_members"),
     # Sub-resources
     path("<int:project_pk>/shareholders/", include("partners.urls")),
     path("<int:project_pk>/cashboxes/", include("cash.urls")),

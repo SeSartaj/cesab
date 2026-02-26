@@ -1,11 +1,15 @@
 """
 Transaction services - business logic for all transaction types.
 All journal entries are created here.
+All mutating functions assert that the calling user has accounting
+permission on the project before doing any work.
 """
 from decimal import Decimal
 from django.utils import timezone
+from django.core.exceptions import PermissionDenied
 from journal.models import JournalEntry, JournalLine
 from coa.models import Account
+from projects.permissions import assert_can_do_accounting
 
 
 def _create_je(project, user, date, description, transaction_type, reference=""):
@@ -54,6 +58,7 @@ def capital_contribution(project, user, date, project_partner, amount,
     Dr. Cashbox Account
     Cr. Partner Capital Account
     """
+    assert_can_do_accounting(user, project)
     currency = currency or project.base_currency
     je = _create_je(project, user, date, description or f"Capital contribution by {project_partner.name}",
                     "capital_contribution")
@@ -69,6 +74,7 @@ def shareholder_withdrawal(project, user, date, project_partner, amount,
     Dr. Partner Current Account
     Cr. Cashbox Account
     """
+    assert_can_do_accounting(user, project)
     currency = currency or project.base_currency
     _check_cashbox_balance(cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
     je = _create_je(project, user, date, description or f"Withdrawal by {project_partner.name}",
@@ -85,6 +91,7 @@ def vendor_bill(project, user, date, vendor, expense_account, amount,
     Dr. Expense Account
     Cr. Vendor Payable Account
     """
+    assert_can_do_accounting(user, project)
     currency = currency or project.base_currency
     je = _create_je(project, user, date, description or f"Bill from {vendor.name}",
                     "vendor_bill")
@@ -100,6 +107,7 @@ def vendor_advance_payment(project, user, date, vendor, amount, cashbox,
     Dr. Vendor Advance Account
     Cr. Cashbox Account
     """
+    assert_can_do_accounting(user, project)
     currency = currency or project.base_currency
     _check_cashbox_balance(cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
     je = _create_je(project, user, date, description or f"Advance to {vendor.name}",
@@ -126,6 +134,7 @@ def vendor_payment_against_bill(project, user, date, vendor, amount, cashbox,
     from coa.services import get_or_create_fx_accounts
     from django.db.models import Sum
 
+    assert_can_do_accounting(user, project)
     currency = currency or project.base_currency
     payment_rate = Decimal(str(exchange_rate))
     amount_tc = Decimal(str(amount))
@@ -192,6 +201,7 @@ def cash_expense(project, user, date, expense_account, amount, cashbox,
     Dr. Expense Account
     Cr. Cashbox Account
     """
+    assert_can_do_accounting(user, project)
     currency = currency or project.base_currency
     _check_cashbox_balance(cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
     je = _create_je(project, user, date, description or "Cash expense",
@@ -208,6 +218,7 @@ def cashbox_transfer(project, user, date, from_cashbox, to_cashbox, amount,
     Dr. To Cashbox Account
     Cr. From Cashbox Account
     """
+    assert_can_do_accounting(user, project)
     currency = currency or project.base_currency
     _check_cashbox_balance(from_cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
     je = _create_je(project, user, date,
@@ -225,6 +236,7 @@ def bank_deposit(project, user, date, from_cashbox, to_cashbox, amount,
     Dr. To Account (bank or cash)
     Cr. From Account
     """
+    assert_can_do_accounting(user, project)
     currency = currency or project.base_currency
     _check_cashbox_balance(from_cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
     je = _create_je(project, user, date,
@@ -242,6 +254,7 @@ def project_income(project, user, date, cashbox, amount, income_account=None,
     Dr. Cashbox Account
     Cr. Revenue Account
     """
+    assert_can_do_accounting(user, project)
     currency = currency or project.base_currency
     if income_account is None:
         income_account = Account.objects.filter(project=project, code="4100").first()
@@ -259,6 +272,7 @@ def asset_purchase(project, user, date, asset_account, amount, cashbox,
     Dr. Asset Account
     Cr. Cashbox Account
     """
+    assert_can_do_accounting(user, project)
     currency = currency or project.base_currency
     _check_cashbox_balance(cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
     je = _create_je(project, user, date, description or "Asset purchase",
@@ -275,6 +289,7 @@ def pay_salary(project, user, date, employee, days_or_months, cashbox,
     Dr. Salary Expense Account
     Cr. Cashbox Account (if paid directly)
     """
+    assert_can_do_accounting(user, project)
     currency = currency or project.base_currency
     amount = employee.salary_amount * Decimal(str(days_or_months))
     _check_cashbox_balance(cashbox, amount * Decimal(str(exchange_rate)))
@@ -291,6 +306,7 @@ def manual_journal_entry(project, user, date, description, lines):
     Manual journal entry with multiple lines.
     lines: list of dicts: {account_id, debit, credit, currency_id, exchange_rate}
     """
+    assert_can_do_accounting(user, project)
     je = _create_je(project, user, date, description, "manual")
     for line in lines:
         account = Account.objects.get(pk=line["account_id"])
@@ -321,6 +337,7 @@ def vendor_advance_settlement(project, user, date, vendor, amount,
     Dr. Vendor Payable Account
     Cr. Vendor Advance Account
     """
+    assert_can_do_accounting(user, project)
     currency = currency or project.base_currency
     je = _create_je(project, user, date,
                     description or f"Advance settlement for {vendor.name}",
@@ -337,6 +354,7 @@ def vendor_direct_payment(project, user, date, vendor, expense_account, amount, 
     Dr. Expense Account
     Cr. Cashbox Account
     """
+    assert_can_do_accounting(user, project)
     currency = currency or project.base_currency
     _check_cashbox_balance(cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
     je = _create_je(project, user, date,
@@ -354,6 +372,7 @@ def vendor_refund(project, user, date, vendor, amount, cashbox,
     Dr. Cashbox Account
     Cr. Vendor Payable Account
     """
+    assert_can_do_accounting(user, project)
     currency = currency or project.base_currency
     je = _create_je(project, user, date,
                     description or f"Refund from {vendor.name}",
@@ -376,6 +395,7 @@ def create_correction_entry(original_je, user, description=""):
     if original_je.corrections.exists():
         raise ValueError("This entry has already been corrected and cannot be corrected again.")
     project = original_je.project
+    assert_can_do_accounting(user, project)
     je = JournalEntry.objects.create(
         project=project,
         date=timezone.now().date(),

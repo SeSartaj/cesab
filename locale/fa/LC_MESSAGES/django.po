@@ -616,7 +616,7 @@ msgstr "داشبورد"
 #: templates/vendors/vendor_list.html:8 vendors/apps.py:8 vendors/models.py:24
 #: vendors/views.py:26
 msgid "Vendors"
-msgstr "فروشندگان"
+msgstr "تأمین کنندگان"
 
 #: templates/projects/_sidebar.html:42
 msgid "All Projects"

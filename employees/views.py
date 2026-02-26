@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
 
 from projects.models import Project
+from projects.permissions import require_accounting
 from .models import ProjectEmployee
 from .forms import EmployeeForm
 from .services import create_employee
@@ -30,15 +31,16 @@ class EmployeeListView(LoginRequiredMixin, ListView):
 @login_required
 def add_employee(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    if not request.user.can_edit:
-        messages.error(request, _("You do not have permission."))
-        return redirect("projects:dashboard", pk=project_pk)
+    denied = require_accounting(request, project)
+    if denied:
+        return denied
 
     if request.method == "POST":
         form = EmployeeForm(request.POST)
         if form.is_valid():
             create_employee(
                 project=project,
+                user=request.user,
                 name=form.cleaned_data["name"],
                 salary_type=form.cleaned_data["salary_type"],
                 salary_amount=form.cleaned_data["salary_amount"],
