@@ -95,11 +95,8 @@
     <span><i class="bi bi-people"></i> {% trans "Shareholders" %}</span>
     {% if request.user.can_edit %}
     <div class="d-flex gap-1">
-      <a href="{% url 'projects:add_new_partner_to_project' project_pk=project.pk %}" class="btn btn-sm btn-light" title="{% trans 'Add New Partner' %}">
-        <i class="bi bi-person-plus"></i> {% trans "New Partner" %}
-      </a>
-      <a href="{% url 'projects:add_shareholder' project_pk=project.pk %}" class="btn btn-sm btn-light" title="{% trans 'Add Existing Partner' %}">
-        <i class="bi bi-plus"></i>
+      <a href="{% url 'projects:add_shareholder' project_pk=project.pk %}" class="btn btn-sm btn-light" title="{% trans 'Add Partner' %}">
+        <i class="bi bi-person-plus"></i> {% trans "Add Partner" %}
       </a>
     </div>
     {% endif %}
@@ -118,7 +115,7 @@
       <tbody>
         {% for pp, contributed, remaining, percent_done in partner_data %}
         <tr>
-          <td>{{ pp.partner.name }}</td>
+          <td>{{ pp.name }}</td>
           <td class="text-end">{{ pp.ownership_percent }}%</td>
           <td class="text-end">{{ pp.capital_commitment|floatformat:2 }}</td>
           <td class="text-end text-success">{{ contributed|floatformat:2 }}</td>
@@ -146,7 +143,7 @@
     <i class="bi bi-people fs-3 d-block mb-2"></i>
     {% trans "No shareholders yet." %}
     {% if request.user.can_edit %}
-    <br><a href="{% url 'projects:add_new_partner_to_project' project_pk=project.pk %}" class="btn btn-sm btn-primary mt-2">
+    <br><a href="{% url 'projects:add_shareholder' project_pk=project.pk %}" class="btn btn-sm btn-primary mt-2">
       <i class="bi bi-person-plus"></i> {% trans "Add Partner" %}
     </a>
     {% endif %}

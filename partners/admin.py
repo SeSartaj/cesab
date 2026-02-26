@@ -1,16 +1,9 @@
 from django.contrib import admin
-from .models import Partner, ProjectPartner
-
-
-@admin.register(Partner)
-class PartnerAdmin(admin.ModelAdmin):
-    list_display = ["name", "email", "phone", "is_active"]
-    list_filter = ["is_active"]
-    search_fields = ["name", "email"]
+from .models import ProjectPartner
 
 
 @admin.register(ProjectPartner)
 class ProjectPartnerAdmin(admin.ModelAdmin):
-    list_display = ["partner", "project", "ownership_percent", "capital_commitment", "joined_at", "is_active"]
+    list_display = ["name", "user", "project", "ownership_percent", "capital_commitment", "joined_at", "is_active"]
     list_filter = ["is_active", "project"]
-    search_fields = ["partner__name", "project__name"]
+    search_fields = ["name", "user__username", "user__first_name", "user__last_name", "project__name"]

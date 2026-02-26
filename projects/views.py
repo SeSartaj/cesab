@@ -21,14 +21,14 @@ def _accessible_projects(user):
     """Return projects visible to this user.
     - Superusers see all projects.
     - Accountant-group users see projects they are a ProjectMember of.
-    - Partner users see projects where their Partner.user == them.
+    - Partner users see projects where their ProjectPartner.user == them.
     """
     if user.is_superuser:
         return Project.objects.filter(is_active=True)
     qs = Project.objects.filter(is_active=True)
     member_pks = ProjectMember.objects.filter(user=user).values_list("project_id", flat=True)
     partner_pks = ProjectPartner.objects.filter(
-        partner__user=user, is_active=True
+        user=user, is_active=True
     ).values_list("project_id", flat=True)
     return qs.filter(Q(pk__in=member_pks) | Q(pk__in=partner_pks)).distinct()
 
@@ -92,7 +92,7 @@ def project_dashboard(request, pk):
     if not request.user.is_superuser:
         is_member = ProjectMember.objects.filter(project=project, user=request.user).exists()
         is_partner = ProjectPartner.objects.filter(
-            project=project, partner__user=request.user, is_active=True
+            project=project, user=request.user, is_active=True
         ).exists()
         if not (is_member or is_partner):
             messages.error(request, _("You do not have access to this project."))
@@ -100,7 +100,7 @@ def project_dashboard(request, pk):
 
     # Partner summary - return as tuples (pp, contributed, remaining, percent_done)
     partners = project.project_partners.filter(is_active=True).select_related(
-        "partner", "capital_account", "current_account"
+        "user", "capital_account", "current_account"
     )
     partner_data = []
     for pp in partners:

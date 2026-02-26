@@ -1,26 +1,5 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from decimal import Decimal
-
-
-class Partner(models.Model):
-    name = models.CharField(max_length=200, verbose_name=_("Name"))
-    email = models.EmailField(blank=True, verbose_name=_("Email"))
-    phone = models.CharField(max_length=50, blank=True, verbose_name=_("Phone"))
-    user = models.ForeignKey(
-        "auth_users.User", on_delete=models.PROTECT, null=True, blank=True,
-        verbose_name=_("System User")
-    )
-    is_active = models.BooleanField(default=True, verbose_name=_("Active"))
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = _("Partner")
-        verbose_name_plural = _("Partners")
-        ordering = ["name"]
-
-    def __str__(self):
-        return self.name
 
 
 class ProjectPartner(models.Model):
@@ -28,9 +7,11 @@ class ProjectPartner(models.Model):
         "projects.Project", on_delete=models.CASCADE,
         related_name="project_partners", verbose_name=_("Project")
     )
-    partner = models.ForeignKey(
-        "partners.Partner", on_delete=models.PROTECT,
-        related_name="project_participations", verbose_name=_("Partner")
+    name = models.CharField(max_length=200, verbose_name=_("Name"))
+    user = models.ForeignKey(
+        "auth_users.User", on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="project_participations", verbose_name=_("User")
     )
     ownership_percent = models.DecimalField(max_digits=5, decimal_places=2, verbose_name=_("Ownership %"))
     capital_commitment = models.DecimalField(max_digits=18, decimal_places=2, verbose_name=_("Capital Commitment"))
@@ -47,12 +28,11 @@ class ProjectPartner(models.Model):
     is_active = models.BooleanField(default=True, verbose_name=_("Active"))
 
     class Meta:
-        unique_together = ("project", "partner")
         verbose_name = _("Project Partner")
         verbose_name_plural = _("Project Partners")
 
     def __str__(self):
-        return f"{self.partner.name} - {self.project.name}"
+        return f"{self.name} - {self.project.name}"
 
     def contributed_amount(self):
         from journal.models import JournalLine

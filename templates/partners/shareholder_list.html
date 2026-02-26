@@ -18,7 +18,6 @@
       <thead class="table-light">
         <tr>
           <th>{% trans "Partner" %}</th>
-          <th>{% trans "Email" %}</th>
           <th class="text-end">{% trans "Ownership %" %}</th>
           <th class="text-end">{% trans "Commitment" %}</th>
           <th class="text-end">{% trans "Contributed" %}</th>
@@ -29,8 +28,7 @@
       <tbody>
         {% for pp in project_partners %}
         <tr>
-          <td class="fw-semibold">{{ pp.partner.name }}</td>
-          <td>{{ pp.partner.email|default:"-" }}</td>
+          <td class="fw-semibold">{{ pp.name }}</td>
           <td class="text-end">{{ pp.ownership_percent }}%</td>
           <td class="text-end">{{ pp.capital_commitment|floatformat:2 }}</td>
           <td class="text-end text-success">{{ pp.contributed_amount|floatformat:2 }}</td>
@@ -40,7 +38,7 @@
           <td>{{ pp.joined_at }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="7" class="text-center text-muted py-4">{% trans "No shareholders yet." %}</td></tr>
+        <tr><td colspan="6" class="text-center text-muted py-4">{% trans "No shareholders yet." %}</td></tr>
         {% endfor %}
       </tbody>
     </table>

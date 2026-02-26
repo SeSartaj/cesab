@@ -88,8 +88,8 @@ def _next_code(project, prefix, start=1):
         i += 1
 
 
-def create_partner_accounts(project, partner):
-    """Create capital and current accounts for a new partner."""
+def create_partner_accounts(project, name):
+    """Create capital and current accounts for a new project partner."""
     idx = project.project_partners.count() + 1
     cap_code = _next_code(project, "31", idx)
     cur_code = _next_code(project, "32", idx)
@@ -97,7 +97,7 @@ def create_partner_accounts(project, partner):
     capital_account = Account.objects.create(
         project=project,
         code=cap_code,
-        name=f"{partner.name} - Capital",
+        name=f"{name} - Capital",
         account_type="equity",
         parent=Account.objects.filter(project=project, code="3100").first(),
         is_system=True,
@@ -105,7 +105,7 @@ def create_partner_accounts(project, partner):
     current_account = Account.objects.create(
         project=project,
         code=cur_code,
-        name=f"{partner.name} - Current Account",
+        name=f"{name} - Current Account",
         account_type="equity",
         parent=Account.objects.filter(project=project, code="3200").first(),
         is_system=True,
