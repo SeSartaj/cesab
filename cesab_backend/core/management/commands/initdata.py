@@ -35,7 +35,6 @@ ACCOUNTANT_PERMISSIONS = [
     "cash.change_cashbox",
     "cash.view_cashbox",
     # Partners
-    "partners.view_partner",
     "partners.view_projectpartner",
     # Vendors
     "vendors.add_vendor",
