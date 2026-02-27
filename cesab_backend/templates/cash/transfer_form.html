@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ title }}{% endblock %}
+{% block sidebar %}{% include "projects/_sidebar.html" with active="transactions" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8 col-md-10">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-arrow-left-right"></i> {{ title }}</span>
+        <a href="{% url 'projects:dashboard' pk=project.pk %}" class="btn btn-sm btn-light">
+          <i class="bi bi-x"></i> {% trans "Cancel" %}
+        </a>
+      </div>
+      <div class="card-body">
+
+        {% if messages %}
+          {% for msg in messages %}
+          <div class="alert alert-{{ msg.tags|default:'info' }} py-2">{{ msg }}</div>
+          {% endfor %}
+        {% endif %}
+
+        <form method="post" id="transferForm">
+          {% csrf_token %}
+
+          <!-- Date & Description -->
+          <div class="row g-3 mb-4">
+            <div class="col-sm-4">
+              <label class="form-label fw-semibold">{{ form.date.label }}</label>
+              {{ form.date }}
+              {% if form.date.errors %}<div class="text-danger small mt-1">{{ form.date.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-sm-8">
+              <label class="form-label fw-semibold">{{ form.description.label }}</label>
+              {{ form.description }}
+              {% if form.description.errors %}<div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+
+          <!-- Non-field errors (e.g. same cashbox) -->
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger py-2">
+            {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+          </div>
+          {% endif %}
+
+          <!-- FROM / TO PANEL -->
+          <div class="row g-3 align-items-stretch mb-4">
+
+            <!-- ── FROM ─────────────────────────────────── -->
+            <div class="col-md-5">
+              <div class="p-3 rounded-3 border bg-light h-100">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                  <span class="badge bg-danger fs-6 px-2">↑</span>
+                  <span class="fw-semibold">{% trans "From" %}</span>
+                </div>
+
+                <!-- From cashbox select -->
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold">{{ form.from_cashbox.label }}</label>
+                  {{ form.from_cashbox }}
+                  {% if form.from_cashbox.errors %}
+                    <div class="text-danger small mt-1">{{ form.from_cashbox.errors.0 }}</div>
+                  {% endif %}
+                  <div id="from_balance_wrap" class="form-text mt-1" style="display:none">
+                    {% trans "Current balance" %}:
+                    <span id="from_balance" class="fw-semibold text-success"></span>
+                  </div>
+                </div>
+
+                <!-- Amount to send -->
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold">
+                    {{ form.from_amount.label }}
+                    <span id="from_currency_badge" class="badge bg-secondary ms-1" style="display:none"></span>
+                  </label>
+                  {{ form.from_amount }}
+                  {% if form.from_amount.errors %}
+                    <div class="text-danger small mt-1">{{ form.from_amount.errors.0 }}</div>
+                  {% endif %}
+                </div>
+
+                <!-- From exchange rate (non-base only) -->
+                <div id="from_rate_wrap" style="display:none">
+                  <label class="form-label small fw-semibold" id="from_rate_label">
+                    {% trans "Exchange Rate" %}
+                  </label>
+                  {{ form.from_rate }}
+                  {% if form.from_rate.errors %}
+                    <div class="text-danger small mt-1">{{ form.from_rate.errors.0 }}</div>
+                  {% endif %}
+                  <div class="form-text small" id="from_rate_hint"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── ARROW ──────────────────────────────── -->
+            <div class="col-md-2 d-flex align-items-center justify-content-center">
+              <i class="bi bi-arrow-right-circle-fill fs-2 text-primary"></i>
+            </div>
+
+            <!-- ── TO ──────────────────────────────────── -->
+            <div class="col-md-5">
+              <div class="p-3 rounded-3 border bg-light h-100">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                  <span class="badge bg-success fs-6 px-2">↓</span>
+                  <span class="fw-semibold">{% trans "To" %}</span>
+                </div>
+
+                <!-- To cashbox select -->
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold">{{ form.to_cashbox.label }}</label>
+                  {{ form.to_cashbox }}
+                  {% if form.to_cashbox.errors %}
+                    <div class="text-danger small mt-1">{{ form.to_cashbox.errors.0 }}</div>
+                  {% endif %}
+                  <div id="to_balance_wrap" class="form-text mt-1" style="display:none">
+                    {% trans "Current balance" %}:
+                    <span id="to_balance" class="fw-semibold text-success"></span>
+                  </div>
+                </div>
+
+                <!-- To exchange rate (non-base, different currency only) -->
+                <div id="to_rate_wrap" style="display:none">
+                  <div class="mb-3">
+                    <label class="form-label small fw-semibold" id="to_rate_label">
+                      {% trans "Exchange Rate" %}
+                    </label>
+                    {{ form.to_rate }}
+                    {% if form.to_rate.errors %}
+                      <div class="text-danger small mt-1">{{ form.to_rate.errors.0 }}</div>
+                    {% endif %}
+                    <div class="form-text small" id="to_rate_hint"></div>
+                  </div>
+                </div>
+
+                <!-- Preview: will receive -->
+                <div id="to_amount_preview" class="p-2 rounded border bg-white" style="display:none">
+                  <div class="text-muted small mb-1">{% trans "Will receive approximately" %}:</div>
+                  <div class="fw-bold fs-5 text-success" id="to_amount_value">—</div>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /row -->
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-check-circle"></i> {% trans "Record Transfer" %}
+            </button>
+            <a href="{% url 'projects:dashboard' pk=project.pk %}" class="btn btn-outline-secondary">
+              {% trans "Cancel" %}
+            </a>
+          </div>
+        </form>
+
+      </div><!-- /card-body -->
+    </div><!-- /card -->
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const CASHBOX_DATA  = {{ cashbox_data_json|safe }};
+  const BASE_CODE     = "{{ base_currency_code }}";
+
+  const fromSelect        = document.getElementById("id_from_cashbox");
+  const toSelect          = document.getElementById("id_to_cashbox");
+  const fromAmountInput   = document.getElementById("id_from_amount");
+  const fromRateInput     = document.getElementById("id_from_rate");
+  const toRateInput       = document.getElementById("id_to_rate");
+
+  const fromBalanceWrap   = document.getElementById("from_balance_wrap");
+  const fromBalanceEl     = document.getElementById("from_balance");
+  const fromCurrBadge     = document.getElementById("from_currency_badge");
+  const fromRateWrap      = document.getElementById("from_rate_wrap");
+  const fromRateHint      = document.getElementById("from_rate_hint");
+
+  const toBalanceWrap     = document.getElementById("to_balance_wrap");
+  const toBalanceEl       = document.getElementById("to_balance");
+  const toRateWrap        = document.getElementById("to_rate_wrap");
+  const toRateHint        = document.getElementById("to_rate_hint");
+  const toAmountPreview   = document.getElementById("to_amount_preview");
+  const toAmountValue     = document.getElementById("to_amount_value");
+
+  function updateUI() {
+    const fromId = fromSelect.value;
+    const toId   = toSelect.value;
+    const f = fromId ? CASHBOX_DATA[fromId] : null;
+    const t = toId   ? CASHBOX_DATA[toId]   : null;
+
+    // ── FROM side ──────────────────────────────────────────────
+    if (f) {
+      fromBalanceWrap.style.display = "";
+      fromBalanceEl.textContent  = f.balance + " " + f.currency_code;
+      fromCurrBadge.textContent  = f.currency_code;
+      fromCurrBadge.style.display = "";
+
+      if (!f.is_base) {
+        fromRateWrap.style.display = "";
+        fromRateHint.textContent   = "1 " + f.currency_code + " = ? " + BASE_CODE;
+      } else {
+        fromRateWrap.style.display = "none";
+        fromRateInput.value = "";
+      }
+    } else {
+      fromBalanceWrap.style.display = "none";
+      fromCurrBadge.style.display   = "none";
+      fromRateWrap.style.display    = "none";
+    }
+
+    // ── TO side ────────────────────────────────────────────────
+    if (t) {
+      toBalanceWrap.style.display = "";
+      toBalanceEl.textContent = t.balance + " " + t.currency_code;
+
+      // to_rate needed only when TO is non-base AND a different currency from FROM
+      const sameCurrency = f && f.currency_code === t.currency_code;
+      if (!t.is_base && !sameCurrency) {
+        toRateWrap.style.display = "";
+        toRateHint.textContent   = "1 " + t.currency_code + " = ? " + BASE_CODE;
+      } else {
+        toRateWrap.style.display = "none";
+        toRateInput.value = "";
+      }
+    } else {
+      toBalanceWrap.style.display = "none";
+      toRateWrap.style.display    = "none";
+    }
+
+    computePreview(f, t);
+  }
+
+  function computePreview(f, t) {
+    if (!f || !t) { toAmountPreview.style.display = "none"; return; }
+
+    const fromAmount = parseFloat(fromAmountInput.value);
+    if (!fromAmount || fromAmount <= 0) { toAmountPreview.style.display = "none"; return; }
+
+    const fromRate = parseFloat(fromRateInput.value) || 1;
+    const toRate   = parseFloat(toRateInput.value)   || fromRate; // fallback for same currency
+
+    // BC pivot
+    const bc = f.is_base ? fromAmount : fromAmount * fromRate;
+
+    // TO amount in to_currency
+    let toAmt;
+    if (t.is_base) {
+      toAmt = bc;
+    } else {
+      const sameCurrency = f.currency_code === t.currency_code;
+      const effectiveToRate = sameCurrency ? fromRate : toRate;
+      toAmt = effectiveToRate > 0 ? bc / effectiveToRate : 0;
+    }
+
+    toAmountPreview.style.display = "";
+    toAmountValue.textContent = toAmt.toLocaleString(undefined, {
+      minimumFractionDigits: 2, maximumFractionDigits: 2
+    }) + " " + t.currency_code;
+
+    // Also show BC equivalent when cross-currency
+    if (!f.is_base || !t.is_base) {
+      toAmountValue.textContent +=
+        "  ≈ " + bc.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) +
+        " " + BASE_CODE;
+    }
+  }
+
+  // Wire events
+  fromSelect.addEventListener("change", updateUI);
+  toSelect.addEventListener("change", updateUI);
+  fromAmountInput.addEventListener("input", function () {
+    computePreview(
+      fromSelect.value ? CASHBOX_DATA[fromSelect.value] : null,
+      toSelect.value   ? CASHBOX_DATA[toSelect.value]   : null,
+    );
+  });
+  fromRateInput.addEventListener("input", function () {
+    computePreview(
+      fromSelect.value ? CASHBOX_DATA[fromSelect.value] : null,
+      toSelect.value   ? CASHBOX_DATA[toSelect.value]   : null,
+    );
+  });
+  toRateInput.addEventListener("input", function () {
+    computePreview(
+      fromSelect.value ? CASHBOX_DATA[fromSelect.value] : null,
+      toSelect.value   ? CASHBOX_DATA[toSelect.value]   : null,
+    );
+  });
+
+  // Initialise on load (restores state after a POST validation failure)
+  updateUI();
+})();
+</script>
+{% endblock %}

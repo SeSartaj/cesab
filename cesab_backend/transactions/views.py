@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+import json
 
 from projects.models import Project
 from projects.permissions import can_access_financial
@@ -24,6 +25,26 @@ def _require_edit(request, project):
 
 def _dash_redirect(project_pk):
     return redirect(reverse("projects:dashboard", kwargs={"pk": project_pk}))
+
+
+def _cashbox_json_ctx(project):
+    """Return context variables needed by the transfer form template's JS."""
+    base = project.base_currency
+    cashboxes = Cashbox.objects.filter(project=project, is_active=True).select_related("currency")
+    data = {}
+    for cb in cashboxes:
+        is_foreign = cb.currency != base
+        bal = cb.balance_in_currency() if is_foreign else cb.balance()
+        data[cb.pk] = {
+            "name": cb.name,
+            "currency_code": cb.currency.code,
+            "is_base": not is_foreign,
+            "balance": f"{bal:,.2f}",
+        }
+    return {
+        "cashbox_data_json": json.dumps(data),
+        "base_currency_code": base.code,
+    }
 
 
 @login_required
@@ -291,9 +312,10 @@ def cashbox_transfer(request, project_pk):
                 svc.cashbox_transfer(
                     project=project, user=request.user,
                     date=d["date"], from_cashbox=d["from_cashbox"],
-                    to_cashbox=d["to_cashbox"], amount=d["amount"],
+                    to_cashbox=d["to_cashbox"], from_amount=d["from_amount"],
+                    from_rate=d.get("from_rate") or 1,
+                    to_rate=d.get("to_rate") or None,
                     description=d.get("description", ""),
-                    currency=d.get("currency"), exchange_rate=d.get("exchange_rate") or 1,
                 )
                 messages.success(request, _("Cashbox transfer recorded."))
                 return _dash_redirect(project_pk)
@@ -302,10 +324,11 @@ def cashbox_transfer(request, project_pk):
     else:
         form = tx_forms.CashboxTransferForm(project, initial={"date": timezone.now().date()})
 
-    return render(request, "transactions/tx_form.html", {
+    return render(request, "cash/transfer_form.html", {
         "project": project, "form": form,
         "title": _("Cashbox Transfer"),
         "tx_type": "cashbox_transfer",
+        **_cashbox_json_ctx(project),
     })
 
 
@@ -324,9 +347,10 @@ def bank_deposit(request, project_pk):
                 svc.bank_deposit(
                     project=project, user=request.user,
                     date=d["date"], from_cashbox=d["from_cashbox"],
-                    to_cashbox=d["to_cashbox"], amount=d["amount"],
+                    to_cashbox=d["to_cashbox"], from_amount=d["from_amount"],
+                    from_rate=d.get("from_rate") or 1,
+                    to_rate=d.get("to_rate") or None,
                     description=d.get("description", ""),
-                    currency=d.get("currency"), exchange_rate=d.get("exchange_rate") or 1,
                 )
                 messages.success(request, _("Bank deposit / cash withdrawal recorded."))
                 return _dash_redirect(project_pk)
@@ -335,10 +359,11 @@ def bank_deposit(request, project_pk):
     else:
         form = tx_forms.BankDepositForm(project, initial={"date": timezone.now().date()})
 
-    return render(request, "transactions/tx_form.html", {
+    return render(request, "cash/transfer_form.html", {
         "project": project, "form": form,
         "title": _("Bank Deposit / Cash Withdrawal"),
         "tx_type": "bank_deposit",
+        **_cashbox_json_ctx(project),
     })
 
 

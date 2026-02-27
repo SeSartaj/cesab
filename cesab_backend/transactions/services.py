@@ -201,37 +201,125 @@ def cash_expense(project, user, date, expense_account, amount, cashbox,
     return je
 
 
-def cashbox_transfer(project, user, date, from_cashbox, to_cashbox, amount,
-                     description="", currency=None, exchange_rate=1):
+def cashbox_transfer(project, user, date, from_cashbox, to_cashbox,
+                     from_amount, from_rate=1, to_rate=None, description=""):
     """
-    Transfer between cashboxes.
-    Dr. To Cashbox Account
-    Cr. From Cashbox Account
+    Transfer between cashboxes, fully supporting cross-currency transfers.
+    Each leg is booked in the cashbox's own currency so balances always
+    display correctly in the cashbox detail view.
+
+    from_amount : amount in from_cashbox.currency
+    from_rate   : base-currency units per 1 from_cashbox.currency unit
+                  (required when from_cashbox is not base-currency; default 1)
+    to_rate     : base-currency units per 1 to_cashbox.currency unit
+                  (required when to_cashbox is non-base AND a different
+                   currency from from_cashbox; defaults to from_rate)
+
+    Dr. To Cashbox Account   (in to_cashbox currency)
+    Cr. From Cashbox Account (in from_cashbox currency)
     """
-    currency = currency or project.base_currency
-    _check_cashbox_balance(from_cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
-    je = _create_je(project, user, date,
-                    description or f"Transfer from {from_cashbox.name} to {to_cashbox.name}",
-                    "cashbox_transfer")
-    _add_line(je, to_cashbox.account, debit=amount, currency=currency, exchange_rate=exchange_rate)
-    _add_line(je, from_cashbox.account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    base         = project.base_currency
+    from_currency = from_cashbox.currency
+    to_currency   = to_cashbox.currency
+
+    from_amount = Decimal(str(from_amount))
+    from_rate   = Decimal(str(from_rate or 1))
+
+    # If both cashboxes share the same non-base currency, use the same rate
+    if to_rate is None or to_currency == from_currency:
+        to_rate = from_rate
+    else:
+        to_rate = Decimal(str(to_rate))
+
+    # BC value that must be equal on both legs (the pivot)
+    bc_amount = (
+        from_amount
+        if from_currency == base
+        else (from_amount * from_rate).quantize(Decimal("0.01"))
+    )
+    # Amount arriving at the to_cashbox in its own currency
+    to_amount = (
+        bc_amount
+        if to_currency == base
+        else (bc_amount / to_rate).quantize(Decimal("0.01"))
+    )
+
+    _check_cashbox_balance(from_cashbox, bc_amount)
+
+    je = _create_je(
+        project, user, date,
+        description or f"Transfer: {from_cashbox.name} → {to_cashbox.name}",
+        "cashbox_transfer",
+    )
+
+    # FROM leg: credit from_cashbox in its own currency
+    if from_currency == base:
+        _add_line(je, from_cashbox.account, credit=from_amount, currency=base, exchange_rate=1)
+    else:
+        _add_line(je, from_cashbox.account, credit=from_amount,
+                  currency=from_currency, exchange_rate=from_rate)
+
+    # TO leg: debit to_cashbox in its own currency
+    if to_currency == base:
+        _add_line(je, to_cashbox.account, debit=bc_amount, currency=base, exchange_rate=1)
+    else:
+        _add_line(je, to_cashbox.account, debit=to_amount,
+                  currency=to_currency, exchange_rate=to_rate)
+
     return je
 
 
-def bank_deposit(project, user, date, from_cashbox, to_cashbox, amount,
-                 description="", currency=None, exchange_rate=1):
+def bank_deposit(project, user, date, from_cashbox, to_cashbox,
+                 from_amount, from_rate=1, to_rate=None, description=""):
     """
-    Bank deposit or cash withdrawal (same as cashbox transfer).
-    Dr. To Account (bank or cash)
-    Cr. From Account
+    Bank deposit or cash withdrawal — same two-leg cross-currency logic
+    as cashbox_transfer but tagged with a different transaction type.
+    Dr. To Account (bank or cash)  (in to_cashbox currency)
+    Cr. From Account               (in from_cashbox currency)
     """
-    currency = currency or project.base_currency
-    _check_cashbox_balance(from_cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
-    je = _create_je(project, user, date,
-                    description or f"Deposit/Withdrawal",
-                    "bank_deposit")
-    _add_line(je, to_cashbox.account, debit=amount, currency=currency, exchange_rate=exchange_rate)
-    _add_line(je, from_cashbox.account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    base         = project.base_currency
+    from_currency = from_cashbox.currency
+    to_currency   = to_cashbox.currency
+
+    from_amount = Decimal(str(from_amount))
+    from_rate   = Decimal(str(from_rate or 1))
+
+    if to_rate is None or to_currency == from_currency:
+        to_rate = from_rate
+    else:
+        to_rate = Decimal(str(to_rate))
+
+    bc_amount = (
+        from_amount
+        if from_currency == base
+        else (from_amount * from_rate).quantize(Decimal("0.01"))
+    )
+    to_amount = (
+        bc_amount
+        if to_currency == base
+        else (bc_amount / to_rate).quantize(Decimal("0.01"))
+    )
+
+    _check_cashbox_balance(from_cashbox, bc_amount)
+
+    je = _create_je(
+        project, user, date,
+        description or "Deposit / Withdrawal",
+        "bank_deposit",
+    )
+
+    if from_currency == base:
+        _add_line(je, from_cashbox.account, credit=from_amount, currency=base, exchange_rate=1)
+    else:
+        _add_line(je, from_cashbox.account, credit=from_amount,
+                  currency=from_currency, exchange_rate=from_rate)
+
+    if to_currency == base:
+        _add_line(je, to_cashbox.account, debit=bc_amount, currency=base, exchange_rate=1)
+    else:
+        _add_line(je, to_cashbox.account, debit=to_amount,
+                  currency=to_currency, exchange_rate=to_rate)
+
     return je
 
 

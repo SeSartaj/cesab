@@ -306,6 +306,38 @@ msgstr "پرداخت معاش"
 msgid "Manual Journal Entry"
 msgstr "ثبت دستی"
 
+#: journal/models.py:19
+msgid "Vendor Advance Settlement"
+msgstr "تسویه پیش‌پرداخت فروشنده"
+
+#: journal/models.py:20
+msgid "Vendor Direct Payment"
+msgstr "پرداخت مستقیم به فروشنده"
+
+#: journal/models.py:21
+msgid "Vendor Refund"
+msgstr "استرداد فروشنده"
+
+#: journal/models.py:22
+msgid "Inventory Purchase"
+msgstr "خرید موجودی"
+
+#: journal/models.py:23
+msgid "Inventory Consumption"
+msgstr "مصرف موجودی"
+
+#: journal/models.py:24
+msgid "Inventory Adjustment"
+msgstr "تعدیل موجودی"
+
+#: journal/models.py:25
+msgid "Partner Inventory Contribution"
+msgstr "مشارکت موجودی شریک"
+
+#: journal/models.py:26
+msgid "Correction Entry"
+msgstr "ثبت اصلاحی"
+
 #: journal/models.py:27 templates/journal/je_detail.html:16
 #: templates/journal/je_list.html:46 templates/projects/dashboard.html:244
 #: templates/transactions/manual_je.html:19 transactions/forms.py:14
@@ -324,11 +356,19 @@ msgstr "توضیحات"
 
 #: journal/models.py:31
 msgid "Transaction Type"
-msgstr ""
+msgstr "نوع معامله"
 
 #: journal/models.py:33
 msgid "Reference"
 msgstr "مرجع"
+
+#: journal/models.py:36
+msgid "Corrects Entry"
+msgstr "اصلاح ثبت"
+
+#: journal/models.py:37
+msgid "If this is a correction entry, reference the original entry here."
+msgstr "اگر این یک ثبت اصلاحی است، ثبت اصلی را اینجا ارجاع دهید."
 
 #: journal/models.py:35 templates/journal/je_detail.html:19
 msgid "Created By"
@@ -359,19 +399,19 @@ msgstr "نرخ مبادله"
 
 #: journal/models.py:71
 msgid "Debit (TC)"
-msgstr ""
+msgstr "بدهکار (ارز معامله)"
 
 #: journal/models.py:72
 msgid "Credit (TC)"
-msgstr ""
+msgstr "بستانکار (ارز معامله)"
 
 #: journal/models.py:76
 msgid "Journal Line"
-msgstr ""
+msgstr "سطر دفتر کل"
 
 #: journal/models.py:77
 msgid "Journal Lines"
-msgstr ""
+msgstr "سطرهای دفتر کل"
 
 #: partners/apps.py:8 partners/models.py:19
 #: templates/projects/dashboard.html:52

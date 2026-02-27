@@ -181,27 +181,81 @@ class CashExpenseForm(BaseTxForm):
         self.fields["cashbox"].queryset = Cashbox.objects.filter(project=project, is_active=True)
 
 
-class CashboxTransferForm(BaseTxForm):
+class CashboxTransferForm(forms.Form):
+    """
+    Smart cross-currency cashbox transfer form.
+    Each cashbox is treated in its own currency; exchange rates are only
+    required when a cashbox is denominated in a non-base currency.
+    """
+    date = forms.DateField(
+        widget=forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+        label=_("Date"),
+    )
+    description = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        label=_("Description"),
+    )
     from_cashbox = forms.ModelChoiceField(
         queryset=Cashbox.objects.none(),
-        widget=forms.Select(attrs={"class": "form-select"}),
+        widget=forms.Select(attrs={"class": "form-select", "id": "id_from_cashbox"}),
         label=_("From Cashbox"),
     )
     to_cashbox = forms.ModelChoiceField(
         queryset=Cashbox.objects.none(),
-        widget=forms.Select(attrs={"class": "form-select"}),
+        widget=forms.Select(attrs={"class": "form-select", "id": "id_to_cashbox"}),
         label=_("To Cashbox"),
     )
-    amount = forms.DecimalField(
+    from_amount = forms.DecimalField(
         max_digits=18, decimal_places=2,
-        widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0"}),
-        label=_("Amount"),
+        widget=forms.NumberInput(attrs={
+            "class": "form-control", "step": "0.01", "min": "0.01", "id": "id_from_amount",
+        }),
+        label=_("Amount to Send"),
+    )
+    # BC per 1 unit of FROM cashbox currency (only required when FROM cashbox is non-base)
+    from_rate = forms.DecimalField(
+        max_digits=18, decimal_places=6,
+        required=False,
+        widget=forms.NumberInput(attrs={
+            "class": "form-control", "step": "0.000001", "min": "0", "id": "id_from_rate",
+        }),
+        label=_("From Rate"),
+        help_text=_("Base-currency value of 1 unit of the FROM cashbox currency."),
+    )
+    # BC per 1 unit of TO cashbox currency (only required when TO cashbox is non-base
+    # AND is a different currency from the FROM cashbox)
+    to_rate = forms.DecimalField(
+        max_digits=18, decimal_places=6,
+        required=False,
+        widget=forms.NumberInput(attrs={
+            "class": "form-control", "step": "0.000001", "min": "0", "id": "id_to_rate",
+        }),
+        label=_("To Rate"),
+        help_text=_("Base-currency value of 1 unit of the TO cashbox currency."),
     )
 
     def __init__(self, project, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["from_cashbox"].queryset = Cashbox.objects.filter(project=project, is_active=True)
-        self.fields["to_cashbox"].queryset = Cashbox.objects.filter(project=project, is_active=True)
+        self.project = project
+        qs = Cashbox.objects.filter(project=project, is_active=True).select_related("currency")
+        self.fields["from_cashbox"].queryset = qs
+        self.fields["to_cashbox"].queryset = qs
+
+    def clean(self):
+        cd = super().clean()
+        from_cb = cd.get("from_cashbox")
+        to_cb = cd.get("to_cashbox")
+        if from_cb and to_cb:
+            if from_cb == to_cb:
+                raise forms.ValidationError(_("From and To cashboxes cannot be the same."))
+            base = self.project.base_currency
+            if from_cb.currency != base and not cd.get("from_rate"):
+                self.add_error("from_rate", _("Exchange rate is required for a non-base-currency cashbox."))
+            # to_rate only needed when TO is non-base AND a different currency from FROM
+            if to_cb.currency != base and to_cb.currency != from_cb.currency and not cd.get("to_rate"):
+                self.add_error("to_rate", _("Exchange rate is required for a non-base-currency cashbox."))
+        return cd
 
 
 class BankDepositForm(CashboxTransferForm):
