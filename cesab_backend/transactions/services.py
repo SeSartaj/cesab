@@ -266,6 +266,22 @@ def cashbox_transfer(project, user, date, from_cashbox, to_cashbox,
         _add_line(je, to_cashbox.account, debit=to_amount,
                   currency=to_currency, exchange_rate=to_rate)
 
+    # FX rounding: the division bc_amount/to_rate is rounded to 2 d.p., so the
+    # actual BC value of the debit leg may differ from bc_amount by a few cents.
+    # Absorb that difference in FX Gain (4200) / FX Loss (5600) so the JE balances.
+    from django.db.models import Sum as _Sum
+    from coa.services import get_or_create_fx_accounts
+    totals   = je.lines.aggregate(d=_Sum("debit"), c=_Sum("credit"))
+    fx_diff  = (totals["d"] or Decimal("0")) - (totals["c"] or Decimal("0"))
+    if fx_diff != Decimal("0"):
+        gain_acc, loss_acc = get_or_create_fx_accounts(project)
+        if fx_diff > 0:
+            # Debit side is larger → credit FX Gain to balance
+            _add_line(je, gain_acc, credit=fx_diff, currency=base, exchange_rate=1)
+        else:
+            # Credit side is larger → debit FX Loss to balance
+            _add_line(je, loss_acc, debit=-fx_diff, currency=base, exchange_rate=1)
+
     return je
 
 
@@ -319,6 +335,18 @@ def bank_deposit(project, user, date, from_cashbox, to_cashbox,
     else:
         _add_line(je, to_cashbox.account, debit=to_amount,
                   currency=to_currency, exchange_rate=to_rate)
+
+    # FX rounding adjustment — same logic as cashbox_transfer
+    from django.db.models import Sum as _Sum
+    from coa.services import get_or_create_fx_accounts
+    totals   = je.lines.aggregate(d=_Sum("debit"), c=_Sum("credit"))
+    fx_diff  = (totals["d"] or Decimal("0")) - (totals["c"] or Decimal("0"))
+    if fx_diff != Decimal("0"):
+        gain_acc, loss_acc = get_or_create_fx_accounts(project)
+        if fx_diff > 0:
+            _add_line(je, gain_acc, credit=fx_diff, currency=base, exchange_rate=1)
+        else:
+            _add_line(je, loss_acc, debit=-fx_diff, currency=base, exchange_rate=1)
 
     return je
 
@@ -378,7 +406,21 @@ def manual_journal_entry(project, user, date, description, lines):
     """
     Manual journal entry with multiple lines.
     lines: list of dicts: {account_id, debit, credit, currency_id, exchange_rate}
+
+    Raises ValueError if lines are empty or debit/credit totals don't balance
+    (amounts in each line dict are treated as base-currency values).
     """
+    if not lines:
+        raise ValueError("At least one journal line is required.")
+
+    total_debit  = sum(Decimal(str(l.get("debit",  0))) for l in lines)
+    total_credit = sum(Decimal(str(l.get("credit", 0))) for l in lines)
+    if total_debit != total_credit:
+        raise ValueError(
+            f"Journal entry is not balanced — "
+            f"Debit {total_debit:,.2f} ≠ Credit {total_credit:,.2f}."
+        )
+
     je = _create_je(project, user, date, description, "manual")
     for line in lines:
         account = Account.objects.get(pk=line["account_id"])

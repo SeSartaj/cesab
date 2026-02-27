@@ -506,9 +506,12 @@ def manual_je(request, project_pk):
         elif not lines:
             messages.error(request, _("At least one line is required."))
         else:
-            svc.manual_journal_entry(project, request.user, date, description, lines)
-            messages.success(request, _("Journal entry recorded."))
-            return _dash_redirect(project_pk)
+            try:
+                svc.manual_journal_entry(project, request.user, date, description, lines)
+                messages.success(request, _("Journal entry recorded."))
+                return _dash_redirect(project_pk)
+            except ValueError as e:
+                messages.error(request, str(e))
 
     return render(request, "transactions/manual_je.html", {
         "project": project,
