@@ -105,15 +105,17 @@ document.addEventListener("DOMContentLoaded", function () {
   }
   if (checkbox) { toggleCurrency(); checkbox.addEventListener("change", toggleCurrency); }
 
-  // Payment method toggle (cashbox vs vendor)
+  // Payment method toggle (cashbox / vendor_cash / vendor_bill)
   const paymentRadios = document.querySelectorAll("input[name='payment_method']");
   const cashboxFields = document.querySelectorAll(".payment-cashbox-field");
   const vendorFields  = document.querySelectorAll(".payment-vendor-field");
   function togglePayment() {
     const selected = document.querySelector("input[name='payment_method']:checked");
     const method = selected ? selected.value : "cashbox";
-    cashboxFields.forEach(el => el.style.display = method === "cashbox" ? "" : "none");
-    vendorFields.forEach(el  => el.style.display = method === "vendor_bill" ? "" : "none");
+    // cashbox field: shown for "cashbox" and "vendor_cash"
+    cashboxFields.forEach(el => el.style.display = (method === "cashbox" || method === "vendor_cash") ? "" : "none");
+    // vendor field: shown for "vendor_bill" and "vendor_cash"
+    vendorFields.forEach(el  => el.style.display = (method === "vendor_bill" || method === "vendor_cash") ? "" : "none");
   }
   if (paymentRadios.length) {
     togglePayment();

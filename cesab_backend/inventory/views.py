@@ -72,24 +72,42 @@ def inventory_purchase(request, project_pk):
             use_base = d.get("use_base_currency", True)
             currency = None if use_base else d.get("currency")
             exchange_rate = 1 if use_base else (d.get("exchange_rate") or 1)
-            if d["payment_method"] == "vendor_bill":
-                svc.record_inventory_purchase_on_credit(
-                    project=project, user=request.user,
-                    date=d["date"], item=d["item"],
-                    quantity=d["quantity"], unit_cost=d["unit_cost"],
-                    vendor=d["vendor"],
-                    description=d.get("description", ""),
-                    currency=currency, exchange_rate=exchange_rate,
-                )
-            else:
-                svc.record_inventory_purchase(
-                    project=project, user=request.user,
-                    date=d["date"], item=d["item"],
-                    quantity=d["quantity"], unit_cost=d["unit_cost"],
-                    cashbox=d["cashbox"],
-                    description=d.get("description", ""),
-                    currency=currency, exchange_rate=exchange_rate,
-                )
+            try:
+                if d["payment_method"] == "vendor_bill":
+                    svc.record_inventory_purchase_on_credit(
+                        project=project, user=request.user,
+                        date=d["date"], item=d["item"],
+                        quantity=d["quantity"], unit_cost=d["unit_cost"],
+                        vendor=d["vendor"],
+                        description=d.get("description", ""),
+                        currency=currency, exchange_rate=exchange_rate,
+                    )
+                elif d["payment_method"] == "vendor_cash":
+                    svc.record_inventory_purchase_cash_to_vendor(
+                        project=project, user=request.user,
+                        date=d["date"], item=d["item"],
+                        quantity=d["quantity"], unit_cost=d["unit_cost"],
+                        cashbox=d["cashbox"], vendor=d["vendor"],
+                        description=d.get("description", ""),
+                        currency=currency, exchange_rate=exchange_rate,
+                    )
+                else:
+                    svc.record_inventory_purchase(
+                        project=project, user=request.user,
+                        date=d["date"], item=d["item"],
+                        quantity=d["quantity"], unit_cost=d["unit_cost"],
+                        cashbox=d["cashbox"],
+                        description=d.get("description", ""),
+                        currency=currency, exchange_rate=exchange_rate,
+                    )
+            except ValueError as e:
+                messages.error(request, str(e))
+                return render(request, "inventory/movement_form.html", {
+                    "project": project,
+                    "form": form,
+                    "title": _("Inventory Purchase"),
+                    "show_currency": True,
+                })
             messages.success(request, _("Inventory purchase recorded."))
             return redirect(reverse("projects:inventory", kwargs={"project_pk": project_pk}))
     else:

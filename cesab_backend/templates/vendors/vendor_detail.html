@@ -65,12 +65,32 @@
       </div>
     </div>
   </div>
+  {% if total_cash_direct %}
+  <div class="col-md-2">
+    <div class="card text-center border-0 bg-warning bg-opacity-10">
+      <div class="card-body py-2">
+        <div class="text-muted small">{% trans "Cash Paid Direct" %}</div>
+        <div class="fs-5 fw-bold text-warning">{{ total_cash_direct|floatformat:0 }}</div>
+        <div class="text-muted" style="font-size:.65rem;">{% trans "inventory, no payable" %}</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
   <div class="col-md-2">
     <div class="card text-center border-0 {% if net_due > 0 %}border-danger{% else %}border-success{% endif %} border-2">
       <div class="card-body py-2">
         <div class="text-muted small fw-bold">{% trans "Net Due" %}</div>
         <div class="fs-5 fw-bold {% if net_due > 0 %}text-danger{% else %}text-success{% endif %}">{{ net_due|floatformat:0 }}</div>
         <div class="text-muted" style="font-size:.65rem;">{% trans "payable − advance" %}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card text-center border-0 bg-secondary bg-opacity-10">
+      <div class="card-body py-2">
+        <div class="text-muted small fw-bold">{% trans "Total Paid" %}</div>
+        <div class="fs-5 fw-bold text-dark">{{ total_ever_paid|floatformat:0 }}</div>
+        <div class="text-muted" style="font-size:.65rem;">{% trans "bills paid + cash direct" %}</div>
       </div>
     </div>
   </div>

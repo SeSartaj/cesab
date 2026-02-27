@@ -36,3 +36,30 @@ class Vendor(models.Model):
         from journal.models import JournalLine
         lines = JournalLine.objects.active().filter(account=self.advance_account)
         return sum(l.debit for l in lines) - sum(l.credit for l in lines)
+
+    def total_paid(self):
+        """Total cash ever paid to this vendor:
+        - Payments against bills / advance settlements (debits on payable account)
+        - Direct cash inventory purchases (InventoryMovement linked to this vendor)
+        """
+        from journal.models import JournalLine
+        from inventory.models import InventoryMovement
+        from django.db.models import Sum
+        from decimal import Decimal
+        bill_paid = JournalLine.objects.active().filter(
+            account=self.payable_account
+        ).aggregate(v=Sum("debit"))["v"] or Decimal("0")
+        cash_direct = InventoryMovement.objects.filter(
+            vendor=self, movement_type="purchase"
+        ).aggregate(v=Sum("total_cost"))["v"] or Decimal("0")
+        return bill_paid + cash_direct
+
+    def total_direct_cash_paid(self):
+        """Total cost of inventory purchased directly with cash from this vendor."""
+        from inventory.models import InventoryMovement
+        from django.db.models import Sum
+        result = InventoryMovement.objects.filter(
+            vendor=self,
+            movement_type="purchase",
+        ).aggregate(v=Sum("total_cost"))["v"]
+        return result or __import__("decimal").Decimal("0")

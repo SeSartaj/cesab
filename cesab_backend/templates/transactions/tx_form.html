@@ -9,15 +9,36 @@
     <div class="card">
       <div class="card-header">
         <i class="bi bi-lightning-charge"></i> {{ title }}
+        {% if locked_vendor %}
+        <a href="{% url 'projects:vendor_detail' project_pk=project.pk pk=locked_vendor.pk %}" class="btn btn-sm btn-light float-end">
+          <i class="bi bi-x"></i> {% trans "Cancel" %}
+        </a>
+        {% else %}
         <a href="{% url 'projects:dashboard' pk=project.pk %}" class="btn btn-sm btn-light float-end">
           <i class="bi bi-x"></i> {% trans "Cancel" %}
         </a>
+        {% endif %}
       </div>
       <div class="card-body">
+        {% if locked_vendor %}
+        <div class="alert alert-info d-flex align-items-center gap-2 mb-3 py-2">
+          <i class="bi bi-truck fs-5"></i>
+          <div>
+            <span class="text-muted small">{% trans "Recording for vendor" %}:</span>
+            <strong class="ms-1">{{ locked_vendor.name }}</strong>
+          </div>
+        </div>
+        {% endif %}
         <form method="post" id="txForm">
           {% csrf_token %}
+          {% if locked_vendor %}
+          <input type="hidden" name="vendor" value="{{ locked_vendor.pk }}">
+          <input type="hidden" name="_vendor_pk" value="{{ locked_vendor.pk }}">
+          {% endif %}
           {% for field in form %}
-            {% if field.name == "use_base_currency" %}
+            {% if locked_vendor and field.name == "vendor" %}
+            {# hidden above — skip the dropdown #}
+            {% elif field.name == "use_base_currency" %}
             <!-- Base Currency Toggle -->
             <div class="mb-3 p-3 bg-light rounded border">
               <div class="form-check form-switch">
@@ -48,9 +69,15 @@
             <button type="submit" class="btn btn-primary px-4">
               <i class="bi bi-check-circle"></i> {% trans "Record" %}
             </button>
+            {% if locked_vendor %}
+            <a href="{% url 'projects:vendor_detail' project_pk=project.pk pk=locked_vendor.pk %}" class="btn btn-outline-secondary">
+              {% trans "Cancel" %}
+            </a>
+            {% else %}
             <a href="{% url 'projects:dashboard' pk=project.pk %}" class="btn btn-outline-secondary">
               {% trans "Cancel" %}
             </a>
+            {% endif %}
           </div>
         </form>
       </div>

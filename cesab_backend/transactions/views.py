@@ -104,10 +104,12 @@ def vendor_bill(request, project_pk):
 
     # Pre-select vendor if provided via query string (?vendor=<pk>)
     initial_vendor_pk = request.GET.get("vendor")
+    locked_vendor = None
     initial = {"date": timezone.now().date(), "use_base_currency": True}
     if initial_vendor_pk:
         try:
-            initial["vendor"] = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+            locked_vendor = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+            initial["vendor"] = locked_vendor
         except Vendor.DoesNotExist:
             pass
 
@@ -126,6 +128,9 @@ def vendor_bill(request, project_pk):
                 currency=currency, exchange_rate=exchange_rate,
             )
             messages.success(request, _("Vendor bill recorded."))
+            vendor_pk = request.POST.get("_vendor_pk")
+            if vendor_pk:
+                return redirect(reverse("projects:vendor_detail", kwargs={"project_pk": project_pk, "pk": vendor_pk}))
             return _dash_redirect(project_pk)
     else:
         form = tx_forms.VendorBillForm(project, initial=initial)
@@ -134,6 +139,7 @@ def vendor_bill(request, project_pk):
         "project": project, "form": form,
         "title": _("Vendor Bill"),
         "tx_type": "vendor_bill",
+        "locked_vendor": locked_vendor,
     })
 
 
@@ -143,6 +149,16 @@ def vendor_advance(request, project_pk):
     denied = _require_edit(request, project)
     if denied:
         return denied
+
+    initial_vendor_pk = request.GET.get("vendor")
+    locked_vendor = None
+    initial = {"date": timezone.now().date(), "use_base_currency": True}
+    if initial_vendor_pk:
+        try:
+            locked_vendor = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+            initial["vendor"] = locked_vendor
+        except Vendor.DoesNotExist:
+            pass
 
     if request.method == "POST":
         form = tx_forms.VendorAdvanceForm(project, request.POST)
@@ -160,16 +176,20 @@ def vendor_advance(request, project_pk):
                     currency=currency, exchange_rate=exchange_rate,
                 )
                 messages.success(request, _("Vendor advance payment recorded."))
+                vendor_pk = request.POST.get("_vendor_pk")
+                if vendor_pk:
+                    return redirect(reverse("projects:vendor_detail", kwargs={"project_pk": project_pk, "pk": vendor_pk}))
                 return _dash_redirect(project_pk)
             except ValueError as e:
                 messages.error(request, str(e))
     else:
-        form = tx_forms.VendorAdvanceForm(project, initial={"date": timezone.now().date(), "use_base_currency": True})
+        form = tx_forms.VendorAdvanceForm(project, initial=initial)
 
     return render(request, "transactions/tx_form.html", {
         "project": project, "form": form,
         "title": _("Vendor Advance Payment"),
         "tx_type": "vendor_advance",
+        "locked_vendor": locked_vendor,
     })
 
 
@@ -179,6 +199,16 @@ def vendor_payment(request, project_pk):
     denied = _require_edit(request, project)
     if denied:
         return denied
+
+    initial_vendor_pk = request.GET.get("vendor")
+    locked_vendor = None
+    initial = {"date": timezone.now().date(), "use_base_currency": True}
+    if initial_vendor_pk:
+        try:
+            locked_vendor = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+            initial["vendor"] = locked_vendor
+        except Vendor.DoesNotExist:
+            pass
 
     if request.method == "POST":
         form = tx_forms.VendorPaymentForm(project, request.POST)
@@ -196,16 +226,20 @@ def vendor_payment(request, project_pk):
                     currency=currency, exchange_rate=exchange_rate,
                 )
                 messages.success(request, _("Vendor payment recorded."))
+                vendor_pk = request.POST.get("_vendor_pk")
+                if vendor_pk:
+                    return redirect(reverse("projects:vendor_detail", kwargs={"project_pk": project_pk, "pk": vendor_pk}))
                 return _dash_redirect(project_pk)
             except ValueError as e:
                 messages.error(request, str(e))
     else:
-        form = tx_forms.VendorPaymentForm(project, initial={"date": timezone.now().date(), "use_base_currency": True})
+        form = tx_forms.VendorPaymentForm(project, initial=initial)
 
     return render(request, "transactions/tx_form.html", {
         "project": project, "form": form,
         "title": _("Vendor Payment Against Bill"),
         "tx_type": "vendor_payment",
+        "locked_vendor": locked_vendor,
     })
 
 
@@ -468,10 +502,12 @@ def vendor_advance_settlement(request, project_pk):
         return denied
 
     initial_vendor_pk = request.GET.get("vendor")
+    locked_vendor = None
     initial = {"date": timezone.now().date(), "use_base_currency": True}
     if initial_vendor_pk:
         try:
-            initial["vendor"] = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+            locked_vendor = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+            initial["vendor"] = locked_vendor
         except Vendor.DoesNotExist:
             pass
 
@@ -491,6 +527,9 @@ def vendor_advance_settlement(request, project_pk):
                     currency=currency, exchange_rate=exchange_rate,
                 )
                 messages.success(request, _("Vendor advance settlement recorded."))
+                vendor_pk = request.POST.get("_vendor_pk")
+                if vendor_pk:
+                    return redirect(reverse("projects:vendor_detail", kwargs={"project_pk": project_pk, "pk": vendor_pk}))
                 return _dash_redirect(project_pk)
             except ValueError as e:
                 messages.error(request, str(e))
@@ -501,6 +540,7 @@ def vendor_advance_settlement(request, project_pk):
         "project": project, "form": form,
         "title": _("Vendor Advance Settlement"),
         "tx_type": "vendor_advance_settlement",
+        "locked_vendor": locked_vendor,
     })
 
 
@@ -512,10 +552,12 @@ def vendor_direct_payment(request, project_pk):
         return denied
 
     initial_vendor_pk = request.GET.get("vendor")
+    locked_vendor = None
     initial = {"date": timezone.now().date(), "use_base_currency": True}
     if initial_vendor_pk:
         try:
-            initial["vendor"] = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+            locked_vendor = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+            initial["vendor"] = locked_vendor
         except Vendor.DoesNotExist:
             pass
 
@@ -536,6 +578,9 @@ def vendor_direct_payment(request, project_pk):
                     currency=currency, exchange_rate=exchange_rate,
                 )
                 messages.success(request, _("Vendor direct payment recorded."))
+                vendor_pk = request.POST.get("_vendor_pk")
+                if vendor_pk:
+                    return redirect(reverse("projects:vendor_detail", kwargs={"project_pk": project_pk, "pk": vendor_pk}))
                 return _dash_redirect(project_pk)
             except ValueError as e:
                 messages.error(request, str(e))
@@ -546,6 +591,7 @@ def vendor_direct_payment(request, project_pk):
         "project": project, "form": form,
         "title": _("Vendor Direct Payment"),
         "tx_type": "vendor_direct_payment",
+        "locked_vendor": locked_vendor,
     })
 
 
@@ -557,10 +603,12 @@ def vendor_refund(request, project_pk):
         return denied
 
     initial_vendor_pk = request.GET.get("vendor")
+    locked_vendor = None
     initial = {"date": timezone.now().date(), "use_base_currency": True}
     if initial_vendor_pk:
         try:
-            initial["vendor"] = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+            locked_vendor = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+            initial["vendor"] = locked_vendor
         except Vendor.DoesNotExist:
             pass
 
@@ -579,6 +627,9 @@ def vendor_refund(request, project_pk):
                 currency=currency, exchange_rate=exchange_rate,
             )
             messages.success(request, _("Vendor refund recorded."))
+            vendor_pk = request.POST.get("_vendor_pk")
+            if vendor_pk:
+                return redirect(reverse("projects:vendor_detail", kwargs={"project_pk": project_pk, "pk": vendor_pk}))
             return _dash_redirect(project_pk)
     else:
         form = tx_forms.VendorRefundForm(project, initial=initial)
@@ -587,4 +638,5 @@ def vendor_refund(request, project_pk):
         "project": project, "form": form,
         "title": _("Vendor Refund"),
         "tx_type": "vendor_refund",
+        "locked_vendor": locked_vendor,
     })

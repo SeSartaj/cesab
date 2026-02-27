@@ -16,7 +16,7 @@
   <div class="card-body p-0">
     <table class="table table-hover mb-0">
       <thead class="table-light">
-        <tr><th>{% trans "Name" %}</th><th>{% trans "Phone" %}</th><th class="text-end">{% trans "Payable" %}</th><th class="text-end">{% trans "Advance" %}</th></tr>
+        <tr><th>{% trans "Name" %}</th><th>{% trans "Phone" %}</th><th class="text-end">{% trans "Payable" %}</th><th class="text-end">{% trans "Paid" %}</th><th class="text-end">{% trans "Advance" %}</th></tr>
       </thead>
       <tbody>
         {% for v in vendors %}
@@ -24,10 +24,11 @@
           <td><a href="{% url 'projects:vendor_detail' project_pk=project.pk pk=v.pk %}">{{ v.name }}</a></td>
           <td>{{ v.phone|default:"-" }}</td>
           <td class="text-end {% if v.balance_payable > 0 %}text-danger{% endif %}">{{ v.balance_payable|floatformat:2 }}</td>
+          <td class="text-end {% if v.total_paid > 0 %}text-success{% endif %}">{{ v.total_paid|floatformat:2 }}</td>
           <td class="text-end {% if v.advance_balance > 0 %}text-info{% endif %}">{{ v.advance_balance|floatformat:2 }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="4" class="text-center text-muted py-4">{% trans "No vendors yet." %}</td></tr>
+        <tr><td colspan="5" class="text-center text-muted py-4">{% trans "No vendors yet." %}</td></tr>
         {% endfor %}
       </tbody>
     </table>

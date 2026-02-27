@@ -24,6 +24,7 @@ class InventoryItemForm(forms.Form):
 class InventoryPurchaseForm(forms.Form):
     PAYMENT_METHODS = [
         ("cashbox", _("Pay Now (Cashbox)")),
+        ("vendor_cash", _("Cash Payment to Vendor")),
         ("vendor_bill", _("On Credit — Vendor Bill")),
     ]
 
@@ -97,9 +98,9 @@ class InventoryPurchaseForm(forms.Form):
     def clean(self):
         cleaned = super().clean()
         method = cleaned.get("payment_method")
-        if method == "cashbox" and not cleaned.get("cashbox"):
+        if method in ("cashbox", "vendor_cash") and not cleaned.get("cashbox"):
             self.add_error("cashbox", _("Please select a cashbox."))
-        elif method == "vendor_bill" and not cleaned.get("vendor"):
+        if method in ("vendor_bill", "vendor_cash") and not cleaned.get("vendor"):
             self.add_error("vendor", _("Please select a vendor."))
         return cleaned
 

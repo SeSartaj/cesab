@@ -41,7 +41,7 @@ def _add_line(je, account, debit=0, credit=0, currency=None, exchange_rate=1):
 def record_inventory_purchase(project, user, date, item, quantity, unit_cost,
                                cashbox, description="", currency=None, exchange_rate=1):
     """
-    Purchase inventory with cash.
+    Purchase inventory with cash (no vendor tracking).
     Dr. Inventory Asset Account
     Cr. Cashbox Account
     """
@@ -66,6 +66,54 @@ def record_inventory_purchase(project, user, date, item, quantity, unit_cost,
         quantity=qty,
         unit_cost=cost,
         total_cost=total,
+        journal_entry=je,
+        created_by=user,
+    )
+    return je
+
+
+@db_transaction.atomic
+def record_inventory_purchase_cash_to_vendor(project, user, date, item, quantity, unit_cost,
+                                              cashbox, vendor, description="",
+                                              currency=None, exchange_rate=1):
+    """
+    Purchase inventory with cash paid directly to a specific vendor.
+    No payable is created — payment is immediate.
+    The vendor FK is stored on the InventoryMovement for reporting.
+
+    Dr. Inventory Asset Account
+    Cr. Cashbox Account
+    """
+    currency = currency or project.base_currency
+    rate = Decimal(str(exchange_rate))
+    qty = Decimal(str(quantity))
+    cost = Decimal(str(unit_cost))
+    total = (qty * cost * rate).quantize(Decimal("0.01"))
+
+    # Check cashbox has sufficient funds
+    cashbox_balance = cashbox.account.balance()
+    if total > cashbox_balance:
+        raise ValueError(
+            f"Insufficient balance in '{cashbox.name}'. "
+            f"Available: {cashbox_balance:,.2f}, Required: {total:,.2f}."
+        )
+
+    je = _create_je(
+        project, user, date,
+        description or f"Cash purchase from {vendor.name}: {item.name} x {quantity} {item.unit}",
+        "inventory_purchase",
+    )
+    _add_line(je, item.inventory_account, debit=qty * cost, currency=currency, exchange_rate=exchange_rate)
+    _add_line(je, cashbox.account, credit=qty * cost, currency=currency, exchange_rate=exchange_rate)
+
+    InventoryMovement.objects.create(
+        project=project,
+        item=item,
+        movement_type="purchase",
+        quantity=qty,
+        unit_cost=cost,
+        total_cost=total,
+        vendor=vendor,
         journal_entry=je,
         created_by=user,
     )

@@ -10,6 +10,7 @@ from decimal import Decimal
 
 from projects.models import Project
 from projects.permissions import can_access_financial
+from inventory.models import InventoryMovement
 from journal.models import JournalEntry, JournalLine
 from .models import Vendor
 from .forms import VendorForm
@@ -71,10 +72,14 @@ class VendorDetailView(LoginRequiredMixin, DetailView):
         ctx["can_add_financial"] = can_access_financial(self.request.user, vendor.project)
 
         # --- Payable account stats ---
-        # Bills = credits on payable from vendor_bill entries
+        # Bills = ALL credits on the payable account that create a liability
+        # (vendor_bill, inventory_purchase on credit, or any future payable-
+        #  creating type).  We explicitly exclude vendor_refund credits here
+        # because those are tracked as a separate breakdown row (total_refunded).
         total_billed = JournalLine.objects.active().filter(
             account=vendor.payable_account,
-            journal_entry__transaction_type="vendor_bill",
+        ).exclude(
+            journal_entry__transaction_type="vendor_refund",
         ).aggregate(v=Sum("credit"))["v"] or Decimal("0")
 
         # Paid = debits on payable (payments + advance settlements)
@@ -90,6 +95,18 @@ class VendorDetailView(LoginRequiredMixin, DetailView):
 
         net_payable = total_billed - total_paid - total_refunded
 
+        # --- Direct cash purchases (vendor_cash payment method) ---
+        cash_movements = InventoryMovement.objects.filter(
+            vendor=vendor, movement_type="purchase",
+        ).select_related("journal_entry")
+        total_cash_direct = cash_movements.aggregate(
+            v=Sum("total_cost")
+        )["v"] or Decimal("0")
+        cash_je_ids = list(cash_movements.values_list("journal_entry_id", flat=True).distinct())
+
+        # Grand total ever paid to this vendor (bill payments + direct cash purchases)
+        total_ever_paid = total_paid + total_cash_direct
+
         # --- Advance account stats ---
         adv_agg = JournalLine.objects.active().filter(account=vendor.advance_account).aggregate(
             total_debit=Sum("debit"),
@@ -102,26 +119,30 @@ class VendorDetailView(LoginRequiredMixin, DetailView):
         # Net amount actually owed (payable minus advances that offset it)
         net_due = net_payable - net_advance
 
-        # --- Recent transactions touching either vendor account ---
-        je_ids = JournalLine.objects.active().filter(
+        # --- Recent transactions: payable/advance account JEs + direct cash purchase JEs ---
+        payable_je_ids = JournalLine.objects.active().filter(
             account_id__in=[vendor.payable_account_id, vendor.advance_account_id]
         ).values_list("journal_entry_id", flat=True).distinct()
 
+        all_je_ids = set(payable_je_ids) | set(cash_je_ids)
+
         vendor_entries = JournalEntry.objects.filter(
             project=vendor.project,
-            id__in=je_ids,
+            id__in=all_je_ids,
         ).prefetch_related("lines").order_by("-date", "-id")[:20]
 
         ctx.update({
-            "total_billed":    total_billed,
-            "total_paid":      total_paid,
-            "total_refunded":  total_refunded,
-            "net_payable":     net_payable,
-            "total_advances":  total_advances,
-            "total_settled":   total_settled,
-            "net_advance":     net_advance,
-            "net_due":         net_due,
-            "vendor_entries":  vendor_entries,
+            "total_billed":       total_billed,
+            "total_paid":         total_paid,
+            "total_refunded":     total_refunded,
+            "net_payable":        net_payable,
+            "total_advances":     total_advances,
+            "total_settled":      total_settled,
+            "net_advance":        net_advance,
+            "net_due":            net_due,
+            "total_cash_direct":  total_cash_direct,
+            "total_ever_paid":    total_ever_paid,
+            "vendor_entries":     vendor_entries,
         })
         return ctx
 

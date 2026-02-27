@@ -112,6 +112,15 @@ class InventoryMovement(models.Model):
         verbose_name=_("Project Partner"),
         help_text=_("Required only for partner contribution"),
     )
+    vendor = models.ForeignKey(
+        "vendors.Vendor",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="inventory_movements",
+        verbose_name=_("Vendor"),
+        help_text=_("Vendor for cash-to-vendor purchases"),
+    )
     journal_entry = models.ForeignKey(
         "journal.JournalEntry",
         on_delete=models.PROTECT,
