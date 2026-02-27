@@ -28,6 +28,7 @@ def journal_list(request, project_pk):
     date_to    = request.GET.get("date_to", "")
     currency_id = request.GET.get("currency", "")
     account_id  = request.GET.get("account", "")
+    search_desc = request.GET.get("q", "").strip()
 
     # --- Build JE queryset (used in both modes) ---
     qs = JournalEntry.objects.filter(project=project).select_related("created_by")
@@ -41,6 +42,8 @@ def journal_list(request, project_pk):
         qs = qs.filter(lines__transaction_currency_id=currency_id).distinct()
     if account_id:
         qs = qs.filter(lines__account_id=account_id).distinct()
+    if search_desc:
+        qs = qs.filter(description__icontains=search_desc)
 
     # --- Ledger mode (account selected) ---
     ledger_lines       = None
@@ -68,6 +71,8 @@ def journal_list(request, project_pk):
                 line_qs = line_qs.filter(journal_entry__transaction_type=tx_type)
             if currency_id:
                 line_qs = line_qs.filter(transaction_currency_id=currency_id)
+            if search_desc:
+                line_qs = line_qs.filter(journal_entry__description__icontains=search_desc)
 
             line_qs = line_qs.select_related(
                 "journal_entry", "journal_entry__created_by", "transaction_currency"
@@ -111,11 +116,14 @@ def journal_list(request, project_pk):
     accounts   = Account.objects.filter(project=project, is_active=True).order_by("code")
 
     # Build query strings that preserve filters (without 'page')
-    fdict = {k: request.GET[k] for k in ("date_from", "date_to", "tx_type", "currency", "account") if request.GET.get(k)}
+    fdict = {k: request.GET[k] for k in ("date_from", "date_to", "tx_type", "currency", "account", "q") if request.GET.get(k)}
     filter_qs = urllib.parse.urlencode(fdict)
     # Same but without 'account' — used by the "Clear account" link
     fdict_no_account = {k: v for k, v in fdict.items() if k != "account"}
     filter_qs_no_account = urllib.parse.urlencode(fdict_no_account)
+    # Same but without 'q' — used by the "Clear search" button
+    fdict_no_q = {k: v for k, v in fdict.items() if k != "q"}
+    filter_qs_no_q = urllib.parse.urlencode(fdict_no_q)
 
     return render(request, "journal/je_list.html", {
         "project":            project,
@@ -136,6 +144,8 @@ def journal_list(request, project_pk):
         "total_credit":       total_credit,
         "filter_qs":          filter_qs,
         "filter_qs_no_account": filter_qs_no_account,
+        "filter_qs_no_q":     filter_qs_no_q,
+        "search_desc":        search_desc,
         "title":              _("Journal / Ledger"),
     })
 
