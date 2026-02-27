@@ -14,6 +14,15 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(','
 
 AUTH_USER_MODEL = 'auth_users.User'
 
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'guardian.backends.ObjectPermissionBackend',
+]
+
+# Guardian: disable anonymous user (single-org system, all users are known)
+GUARDIAN_ANONYMOUS_USER_NAME = None
+GUARDIAN_RAISE_403 = False
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -26,6 +35,7 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
     'rosetta',
+    'guardian',
     # Local apps
     'core',
     'auth_users',

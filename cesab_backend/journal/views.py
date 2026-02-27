@@ -11,6 +11,7 @@ from decimal import Decimal
 import urllib.parse
 
 from projects.models import Project
+from projects.permissions import can_access_financial
 from coa.models import Account
 from core.models import Currency
 from .models import JournalEntry, JournalLine, TRANSACTION_TYPES
@@ -148,18 +149,7 @@ class JournalEntryDetailView(LoginRequiredMixin, DetailView):
         ctx = super().get_context_data(**kwargs)
         ctx["project"] = self.object.project
         ctx["corrections"] = self.object.corrections.all()
-        return ctx
-
-
-class JournalEntryDetailView(LoginRequiredMixin, DetailView):
-    model = JournalEntry
-    template_name = "journal/je_detail.html"
-    context_object_name = "entry"
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx["project"] = self.object.project
-        ctx["corrections"] = self.object.corrections.all()
+        ctx["can_add_financial"] = can_access_financial(self.request.user, self.object.project)
         return ctx
 
 
@@ -169,7 +159,7 @@ def create_correction(request, project_pk, je_pk):
     project = get_object_or_404(Project, pk=project_pk)
     original_je = get_object_or_404(JournalEntry, pk=je_pk, project=project)
 
-    if not request.user.can_edit:
+    if not can_access_financial(request.user, project):
         messages.error(request, _("You do not have permission to perform this action."))
         return redirect(reverse("projects:je_detail", kwargs={"project_pk": project_pk, "pk": je_pk}))
 

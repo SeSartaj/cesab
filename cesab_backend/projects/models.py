@@ -17,17 +17,36 @@ class Project(models.Model):
         verbose_name = _("Project")
         verbose_name_plural = _("Projects")
         ordering = ["-created_at"]
+        permissions = [
+            # Custom object-level permissions used with django-guardian.
+            # ROLE_PERMISSIONS in projects/permissions.py maps each role to
+            # the subset it receives.
+            ("manage_members", "Can manage project members"),
+            ("add_financial_data", "Can add / edit financial data"),
+        ]
 
     def __str__(self):
         return self.name
 
 
 class ProjectMember(models.Model):
-    """Links a staff/accountant user to a project with an explicit role."""
+    """Links a user to a project with an explicit role.
+
+    Saving or deleting a ProjectMember automatically synchronises the user's
+    django-guardian object-level permissions for that project so the rest of
+    the codebase can simply call ``user.has_perm("projects.view_project", project)``.
+    """
+
+    ROLE_ADMIN = "admin"
+    ROLE_ACCOUNTANT = "accountant"
+    ROLE_VIEWER = "viewer"
+
     ROLE_CHOICES = [
-        ("accountant", _("Accountant")),
-        ("viewer", _("Viewer")),
+        (ROLE_ADMIN, _("Admin")),
+        (ROLE_ACCOUNTANT, _("Accountant")),
+        (ROLE_VIEWER, _("Viewer")),
     ]
+
     project = models.ForeignKey(
         Project, on_delete=models.CASCADE,
         related_name="members", verbose_name=_("Project")
@@ -36,7 +55,10 @@ class ProjectMember(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name="project_memberships", verbose_name=_("User")
     )
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="viewer", verbose_name=_("Role"))
+    role = models.CharField(
+        max_length=20, choices=ROLE_CHOICES,
+        default=ROLE_VIEWER, verbose_name=_("Role")
+    )
 
     class Meta:
         unique_together = ("project", "user")
@@ -45,3 +67,16 @@ class ProjectMember(models.Model):
 
     def __str__(self):
         return f"{self.user} → {self.project} ({self.role})"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Sync guardian object permissions whenever a member is created or
+        # their role changes.  Import is deferred to avoid circular imports.
+        from .permissions import assign_role_permissions
+        assign_role_permissions(self.user, self.project, self.role)
+
+    def delete(self, *args, **kwargs):
+        user, project = self.user, self.project
+        super().delete(*args, **kwargs)
+        from .permissions import revoke_all_permissions
+        revoke_all_permissions(user, project)

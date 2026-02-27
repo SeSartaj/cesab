@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
 
 from projects.models import Project
+from projects.permissions import can_access_financial
 from .models import ProjectEmployee
 from .forms import EmployeeForm
 from .services import create_employee
@@ -24,13 +25,14 @@ class EmployeeListView(LoginRequiredMixin, ListView):
         ctx = super().get_context_data(**kwargs)
         ctx["project"] = self.project
         ctx["title"] = _("Employees")
+        ctx["can_add_financial"] = can_access_financial(self.request.user, self.project)
         return ctx
 
 
 @login_required
 def add_employee(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    if not request.user.can_edit:
+    if not can_access_financial(request.user, project):
         messages.error(request, _("You do not have permission."))
         return redirect("projects:dashboard", pk=project_pk)
 

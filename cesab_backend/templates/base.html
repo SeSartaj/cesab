@@ -92,10 +92,15 @@
         <li class="nav-item">
           <span class="nav-link text-light opacity-75 small">
             <i class="bi bi-person-circle"></i> {{ request.user.get_full_name|default:request.user.username }}
-            {% for g in request.user.groups.all %}
-            <span class="badge bg-warning text-dark badge-role ms-1">{{ g.name }}</span>
-            {% endfor %}
+            {% if request.user.is_superuser %}
+            <span class="badge bg-warning text-dark badge-role ms-1">{% trans "Super Admin" %}</span>
+            {% endif %}
           </span>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'auth_users:password_change' %}" class="nav-link text-light opacity-75 small">
+            <i class="bi bi-key"></i> {% trans "Change Password" %}
+          </a>
         </li>
         <li class="nav-item">
           <form method="post" action="{% url 'auth_users:logout' %}" class="d-inline">

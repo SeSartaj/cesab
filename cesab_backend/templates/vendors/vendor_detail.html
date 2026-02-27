@@ -76,7 +76,7 @@
   </div>
 </div>
 
-{% if request.user.can_edit %}
+{% if can_add_financial %}
 <div class="d-flex flex-wrap gap-2 mb-4">
   <a href="{% url 'projects:vendor_bill' project_pk=project.pk %}?vendor={{ vendor.pk }}" class="btn btn-outline-danger btn-sm">
     <i class="bi bi-receipt"></i> {% trans "Record Bill" %}

@@ -7,7 +7,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h5><i class="bi bi-boxes"></i> {% trans "Inventory" %} — {{ project.name }}</h5>
-  {% if perms.inventory.add_inventoryitem or request.user.is_superuser %}
+  {% if can_add_financial %}
   <a href="{% url 'projects:add_inventory_item' project_pk=project.pk %}" class="btn btn-primary btn-sm">
     <i class="bi bi-plus"></i> {% trans "New Item" %}
   </a>
@@ -15,7 +15,7 @@
 </div>
 
 <!-- Quick Actions -->
-{% if perms.inventory.add_inventorymovement or request.user.is_superuser %}
+{% if can_add_financial %}
 <div class="card mb-4">
   <div class="card-header"><i class="bi bi-lightning-charge"></i> {% trans "Record Movement" %}</div>
   <div class="card-body">
@@ -93,7 +93,7 @@
   <div class="card-body text-center text-muted py-5">
     <i class="bi bi-boxes fs-1 mb-3 d-block"></i>
     <p>{% trans "No inventory items yet." %}</p>
-    {% if perms.inventory.add_inventoryitem or request.user.is_superuser %}
+    {% if can_add_financial %}
     <a href="{% url 'projects:add_inventory_item' project_pk=project.pk %}" class="btn btn-primary">
       {% trans "Add First Item" %}
     </a>

@@ -8,6 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from decimal import Decimal
 
 from projects.models import Project
+from projects.permissions import can_access_financial
 from .models import Cashbox
 from .forms import CashboxForm
 from .services import create_cashbox
@@ -25,6 +26,7 @@ class CashboxListView(LoginRequiredMixin, ListView):
         ctx = super().get_context_data(**kwargs)
         ctx["project"] = self.project
         ctx["title"] = _("Cashboxes")
+        ctx["can_add_financial"] = can_access_financial(self.request.user, self.project)
         ctx["cashbox_data"] = [
             (cb,
              cb.balance_in_currency() if cb.currency != self.project.base_currency else cb.balance(),
@@ -37,7 +39,7 @@ class CashboxListView(LoginRequiredMixin, ListView):
 @login_required
 def add_cashbox(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    if not request.user.can_edit:
+    if not can_access_financial(request.user, project):
         messages.error(request, _("You do not have permission."))
         return redirect("projects:dashboard", pk=project_pk)
 
@@ -70,6 +72,7 @@ class CashboxDetailView(LoginRequiredMixin, DetailView):
         ctx = super().get_context_data(**kwargs)
         cb = self.object
         ctx["project"] = cb.project
+        ctx["can_add_financial"] = can_access_financial(self.request.user, cb.project)
 
         from journal.models import JournalLine
         lines = JournalLine.objects.active().filter(

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Members" %} — {{ project.name }}{% endblock %}
+
+{% block sidebar %}{% include "projects/_sidebar.html" with active="members" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-0"><i class="bi bi-people-fill"></i> {% trans "Project Members" %}</h4>
+    <small class="text-muted">{{ project.name }}</small>
+  </div>
+  {% if can_manage_members %}
+  <a href="{% url 'projects:add_member' pk=project.pk %}" class="btn btn-primary">
+    <i class="bi bi-person-plus"></i> {% trans "Add Member" %}
+  </a>
+  {% endif %}
+</div>
+
+<!-- Role legend card -->
+<div class="card mb-4">
+  <div class="card-header"><i class="bi bi-shield-check"></i> {% trans "Role Permissions" %}</div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>{% trans "Role" %}</th>
+          <th class="text-center">{% trans "View Project" %}</th>
+          <th class="text-center">{% trans "Edit Project" %}</th>
+          <th class="text-center">{% trans "Manage Members" %}</th>
+          <th class="text-center">{% trans "Add Financial Data" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge bg-danger">{% trans "Admin" %}</span></td>
+          <td class="text-center text-success"><i class="bi bi-check-circle-fill"></i></td>
+          <td class="text-center text-success"><i class="bi bi-check-circle-fill"></i></td>
+          <td class="text-center text-success"><i class="bi bi-check-circle-fill"></i></td>
+          <td class="text-center text-success"><i class="bi bi-check-circle-fill"></i></td>
+        </tr>
+        <tr>
+          <td><span class="badge bg-primary">{% trans "Accountant" %}</span></td>
+          <td class="text-center text-success"><i class="bi bi-check-circle-fill"></i></td>
+          <td class="text-center text-muted"><i class="bi bi-x-circle"></i></td>
+          <td class="text-center text-muted"><i class="bi bi-x-circle"></i></td>
+          <td class="text-center text-success"><i class="bi bi-check-circle-fill"></i></td>
+        </tr>
+        <tr>
+          <td><span class="badge bg-secondary">{% trans "Viewer" %}</span></td>
+          <td class="text-center text-success"><i class="bi bi-check-circle-fill"></i></td>
+          <td class="text-center text-muted"><i class="bi bi-x-circle"></i></td>
+          <td class="text-center text-muted"><i class="bi bi-x-circle"></i></td>
+          <td class="text-center text-muted"><i class="bi bi-x-circle"></i></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Member list -->
+<div class="card">
+  <div class="card-header"><i class="bi bi-list-ul"></i> {% trans "Members" %} ({{ members.count }})</div>
+  {% if members %}
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>{% trans "User" %}</th>
+          <th>{% trans "Full Name" %}</th>
+          <th>{% trans "Role" %}</th>
+          {% if can_manage_members %}<th class="text-end">{% trans "Actions" %}</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for member in members %}
+        <tr>
+          <td>
+            <i class="bi bi-person-circle text-muted me-1"></i>
+            {{ member.user.username }}
+          </td>
+          <td>{{ member.user.get_full_name|default:"—" }}</td>
+          <td>
+            {% if member.role == "admin" %}
+              <span class="badge bg-danger">{{ member.get_role_display }}</span>
+            {% elif member.role == "accountant" %}
+              <span class="badge bg-primary">{{ member.get_role_display }}</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ member.get_role_display }}</span>
+            {% endif %}
+          </td>
+          {% if can_manage_members %}
+          <td class="text-end">
+            <a href="{% url 'projects:edit_member' pk=project.pk member_pk=member.pk %}"
+               class="btn btn-sm btn-outline-secondary me-1">
+              <i class="bi bi-pencil"></i> {% trans "Edit Role" %}
+            </a>
+            <form method="post"
+                  action="{% url 'projects:remove_member' pk=project.pk member_pk=member.pk %}"
+                  class="d-inline"
+                  onsubmit="return confirm('{% trans "Remove this member?" %}')">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash"></i> {% trans "Remove" %}
+              </button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-center text-muted py-4">
+    <i class="bi bi-people fs-2 d-block mb-2"></i>
+    {% trans "No members yet." %}
+    {% if can_manage_members %}
+    <br>
+    <a href="{% url 'projects:add_member' pk=project.pk %}" class="btn btn-primary btn-sm mt-2">
+      <i class="bi bi-person-plus"></i> {% trans "Add First Member" %}
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

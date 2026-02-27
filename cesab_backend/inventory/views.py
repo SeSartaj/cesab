@@ -1,4 +1,4 @@
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.contrib import messages
@@ -6,15 +6,16 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
 from projects.models import Project
+from projects.permissions import can_access_financial
 from .models import InventoryItem, InventoryMovement
 from . import forms as inv_forms
 from . import services as svc
 
 
-def _require_perm(request, project_pk, perm="inventory.add_inventorymovement"):
-    if not request.user.has_perm(perm) and not request.user.is_superuser:
+def _require_perm(request, project):
+    if not can_access_financial(request.user, project):
         messages.error(request, _("You do not have permission to perform this action."))
-        return redirect("projects:dashboard", pk=project_pk)
+        return redirect("projects:dashboard", pk=project.pk)
     return None
 
 
@@ -26,13 +27,14 @@ def item_list(request, project_pk):
         "project": project,
         "items": items,
         "title": _("Inventory"),
+        "can_add_financial": can_access_financial(request.user, project),
     })
 
 
 @login_required
 def add_item(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_perm(request, project_pk, "inventory.add_inventoryitem")
+    denied = _require_perm(request, project)
     if denied:
         return denied
 
@@ -59,7 +61,7 @@ def add_item(request, project_pk):
 @login_required
 def inventory_purchase(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_perm(request, project_pk)
+    denied = _require_perm(request, project)
     if denied:
         return denied
 
@@ -106,7 +108,7 @@ def inventory_purchase(request, project_pk):
 @login_required
 def inventory_consumption(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_perm(request, project_pk)
+    denied = _require_perm(request, project)
     if denied:
         return denied
 
@@ -136,7 +138,7 @@ def inventory_consumption(request, project_pk):
 @login_required
 def inventory_adjustment(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_perm(request, project_pk)
+    denied = _require_perm(request, project)
     if denied:
         return denied
 
@@ -169,7 +171,7 @@ def inventory_adjustment(request, project_pk):
 @login_required
 def partner_inventory_contribution(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    denied = _require_perm(request, project_pk)
+    denied = _require_perm(request, project)
     if denied:
         return denied
 

@@ -9,6 +9,7 @@ from django.db.models import Sum
 from decimal import Decimal
 
 from projects.models import Project
+from projects.permissions import can_access_financial
 from journal.models import JournalEntry, JournalLine
 from .models import Vendor
 from .forms import VendorForm
@@ -27,13 +28,14 @@ class VendorListView(LoginRequiredMixin, ListView):
         ctx = super().get_context_data(**kwargs)
         ctx["project"] = self.project
         ctx["title"] = _("Vendors")
+        ctx["can_add_financial"] = can_access_financial(self.request.user, self.project)
         return ctx
 
 
 @login_required
 def add_vendor(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    if not request.user.can_edit:
+    if not can_access_financial(request.user, project):
         messages.error(request, _("You do not have permission."))
         return redirect("projects:dashboard", pk=project_pk)
 
@@ -66,6 +68,7 @@ class VendorDetailView(LoginRequiredMixin, DetailView):
         ctx = super().get_context_data(**kwargs)
         vendor = self.object
         ctx["project"] = vendor.project
+        ctx["can_add_financial"] = can_access_financial(self.request.user, vendor.project)
 
         # --- Payable account stats ---
         # Bills = credits on payable from vendor_bill entries
