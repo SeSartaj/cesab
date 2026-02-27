@@ -92,9 +92,14 @@
 <!-- Partners / Shareholders -->
 <div class="card mb-4" id="shareholders">
   <div class="card-header d-flex justify-content-between align-items-center">
-    <span><i class="bi bi-people"></i> {% trans "Shareholders" %}</span>
+    <a href="{% url 'projects:shareholders' project_pk=project.pk %}" class="text-white text-decoration-none">
+      <i class="bi bi-people"></i> {% trans "Shareholders" %} <i class="bi bi-arrow-right-short"></i>
+    </a>
     {% if can_add_financial %}
     <div class="d-flex gap-1">
+      <a href="{% url 'projects:shareholders' project_pk=project.pk %}" class="btn btn-sm btn-light" title="{% trans 'View Details' %}">
+        <i class="bi bi-graph-up"></i> {% trans "Details" %}
+      </a>
       <a href="{% url 'projects:add_shareholder' project_pk=project.pk %}" class="btn btn-sm btn-light" title="{% trans 'Add Partner' %}">
         <i class="bi bi-person-plus"></i> {% trans "Add Partner" %}
       </a>

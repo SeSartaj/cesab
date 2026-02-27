@@ -41,3 +41,21 @@ class ProjectPartner(models.Model):
 
     def remaining_commitment(self):
         return self.capital_commitment - self.contributed_amount()
+
+    def contribution_entries(self):
+        """Return active JournalLines that represent capital contributions to this partner
+        (cash or inventory), ordered most-recent first. Credit values are in base currency."""
+        from journal.models import JournalLine
+        return (
+            JournalLine.objects.active()
+            .filter(
+                account=self.capital_account,
+                credit__gt=0,
+                journal_entry__transaction_type__in=[
+                    "capital_contribution",
+                    "partner_inventory_contribution",
+                ],
+            )
+            .select_related("journal_entry")
+            .order_by("-journal_entry__date", "-journal_entry__id")
+        )
