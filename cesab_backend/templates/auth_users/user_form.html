@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ title }}{% endblock %}
+{% block nav_users_active %}active{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-3">
+  <div class="col-lg-7">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'auth_users:user_list' %}"><i class="bi bi-people"></i> {% trans "Users" %}</a>
+        </li>
+        <li class="breadcrumb-item active">{{ title }}</li>
+      </ol>
+    </nav>
+
+    <div class="card">
+      <div class="card-header">
+        <i class="bi bi-{% if is_create %}person-plus-fill{% else %}pencil-square{% endif %}"></i>
+        {{ title }}
+        {% if not is_create and edited_user %}
+        <span class="badge bg-light text-dark float-end">{{ edited_user.username }}</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <!-- Non-field errors -->
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger">
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+          </div>
+          {% endif %}
+
+          <!-- Account info section -->
+          <h6 class="text-uppercase text-muted small fw-bold mb-3 mt-1">
+            <i class="bi bi-person-circle"></i> {% trans "Account Information" %}
+          </h6>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-12">
+              {% with field=form.username %}
+              <label class="form-label fw-semibold" for="{{ field.id_for_label }}">
+                {{ field.label }} <span class="text-danger">*</span>
+              </label>
+              {{ field }}
+              {% if field.errors %}
+              <div class="text-danger small mt-1">{% for e in field.errors %}{{ e }}{% endfor %}</div>
+              {% endif %}
+              {% if field.help_text %}
+              <div class="form-text">{{ field.help_text }}</div>
+              {% endif %}
+              {% endwith %}
+            </div>
+
+            <div class="col-md-6">
+              {% with field=form.first_name %}
+              <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}<div class="text-danger small mt-1">{% for e in field.errors %}{{ e }}{% endfor %}</div>{% endif %}
+              {% endwith %}
+            </div>
+
+            <div class="col-md-6">
+              {% with field=form.last_name %}
+              <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}<div class="text-danger small mt-1">{% for e in field.errors %}{{ e }}{% endfor %}</div>{% endif %}
+              {% endwith %}
+            </div>
+
+            <div class="col-md-12">
+              {% with field=form.email %}
+              <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}<div class="text-danger small mt-1">{% for e in field.errors %}{{ e }}{% endfor %}</div>{% endif %}
+              {% endwith %}
+            </div>
+          </div>
+
+          {% if is_create %}
+          <hr>
+          <h6 class="text-uppercase text-muted small fw-bold mb-3">
+            <i class="bi bi-lock"></i> {% trans "Password" %}
+          </h6>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              {% with field=form.password1 %}
+              <label class="form-label fw-semibold" for="{{ field.id_for_label }}">
+                {{ field.label }} <span class="text-danger">*</span>
+              </label>
+              {{ field }}
+              {% if field.errors %}<div class="text-danger small mt-1">{% for e in field.errors %}{{ e }}{% endfor %}</div>{% endif %}
+              {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+              {% endwith %}
+            </div>
+            <div class="col-md-6">
+              {% with field=form.password2 %}
+              <label class="form-label fw-semibold" for="{{ field.id_for_label }}">
+                {{ field.label }} <span class="text-danger">*</span>
+              </label>
+              {{ field }}
+              {% if field.errors %}<div class="text-danger small mt-1">{% for e in field.errors %}{{ e }}{% endfor %}</div>{% endif %}
+              {% endwith %}
+            </div>
+          </div>
+          {% endif %}
+
+          <hr>
+          <h6 class="text-uppercase text-muted small fw-bold mb-3">
+            <i class="bi bi-shield-check"></i> {% trans "Permissions & Status" %}
+          </h6>
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <div class="form-check form-switch">
+                {{ form.is_active }}
+                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                  {{ form.is_active.label }}
+                </label>
+              </div>
+              <div class="form-text text-muted small">{% trans "Uncheck to disable login without deleting." %}</div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check form-switch">
+                {{ form.is_staff }}
+                <label class="form-check-label" for="{{ form.is_staff.id_for_label }}">
+                  {{ form.is_staff.label }}
+                </label>
+              </div>
+              {% if form.is_staff.help_text %}
+              <div class="form-text text-muted small">{{ form.is_staff.help_text }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4">
+              <div class="form-check form-switch">
+                {{ form.is_superuser }}
+                <label class="form-check-label" for="{{ form.is_superuser.id_for_label }}">
+                  {{ form.is_superuser.label }}
+                </label>
+              </div>
+              {% if form.is_superuser.help_text %}
+              <div class="form-text text-muted small">{{ form.is_superuser.help_text }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Groups -->
+          <hr>
+          <h6 class="text-uppercase text-muted small fw-bold mb-2">
+            <i class="bi bi-collection"></i> {% trans "Groups" %}
+          </h6>
+          {% if form.groups.help_text %}
+          <p class="text-muted small">{{ form.groups.help_text }}</p>
+          {% endif %}
+          {% if form.groups.field.queryset.exists %}
+          <div class="d-flex flex-wrap gap-3 mb-3">
+            {% for checkbox in form.groups %}
+            <div class="form-check">
+              {{ checkbox.tag }}
+              <label class="form-check-label" for="{{ checkbox.id_for_label }}">{{ checkbox.choice_label }}</label>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-muted small"><em>{% trans "No groups have been created yet." %}</em></p>
+          {% endif %}
+
+          <!-- Actions -->
+          <hr>
+          <div class="d-flex justify-content-between">
+            <a href="{% url 'auth_users:user_list' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-arrow-left"></i> {% trans "Cancel" %}
+            </a>
+            {% if not is_create and edited_user and edited_user != request.user %}
+            <a href="{% url 'auth_users:user_password' pk=edited_user.pk %}" class="btn btn-outline-secondary">
+              <i class="bi bi-key"></i> {% trans "Change Password" %}
+            </a>
+            {% endif %}
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-lg"></i> {{ action }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Style the boolean checkboxes like Bootstrap switches
+document.querySelectorAll('#id_is_active, #id_is_staff, #id_is_superuser').forEach(function(el) {
+  el.classList.add('form-check-input');
+});
+</script>
+{% endblock %}

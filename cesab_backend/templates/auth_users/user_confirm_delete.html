@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Delete User" %} — {{ object.username }}{% endblock %}
+{% block nav_users_active %}active{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-3">
+  <div class="col-lg-5">
+
+    <nav aria-label="breadcrumb" class="mb-3">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'auth_users:user_list' %}"><i class="bi bi-people"></i> {% trans "Users" %}</a>
+        </li>
+        <li class="breadcrumb-item active">{% trans "Delete User" %}</li>
+      </ol>
+    </nav>
+
+    <div class="card border-danger">
+      <div class="card-header bg-danger">
+        <i class="bi bi-exclamation-triangle-fill"></i> {% trans "Confirm Deletion" %}
+      </div>
+      <div class="card-body">
+        <div class="text-center mb-4">
+          <i class="bi bi-person-x-fill display-1 text-danger"></i>
+          <h5 class="mt-3">{{ object.username }}</h5>
+          {% if object.get_full_name %}
+          <p class="text-muted mb-0">{{ object.get_full_name }}</p>
+          {% endif %}
+          {% if object.email %}
+          <p class="text-muted small">{{ object.email }}</p>
+          {% endif %}
+        </div>
+
+        <div class="alert alert-danger">
+          <i class="bi bi-exclamation-triangle"></i>
+          <strong>{% trans "Warning:" %}</strong>
+          {% trans "This action is permanent and cannot be undone. All data associated with this user account will be removed." %}
+        </div>
+
+        {% if object.is_superuser %}
+        <div class="alert alert-warning">
+          <i class="bi bi-shield-exclamation"></i>
+          {% trans "This user is a Super Admin. Make sure another Super Admin account exists before deleting." %}
+        </div>
+        {% endif %}
+
+        <form method="post">
+          {% csrf_token %}
+          <div class="d-flex justify-content-between">
+            <a href="{% url 'auth_users:user_list' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-arrow-left"></i> {% trans "Cancel" %}
+            </a>
+            <button type="submit" class="btn btn-danger">
+              <i class="bi bi-trash-fill"></i> {% trans "Yes, Delete User" %}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

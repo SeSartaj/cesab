@@ -52,6 +52,13 @@
         <li class="nav-item">
           <a class="nav-link" href="{% url 'projects:list' %}"><i class="bi bi-folder2-open"></i> {% trans "Projects" %}</a>
         </li>
+        {% if request.user.is_superuser %}
+        <li class="nav-item">
+          <a class="nav-link {% block nav_users_active %}{% endblock %}" href="{% url 'auth_users:user_list' %}">
+            <i class="bi bi-people-fill"></i> {% trans "Users" %}
+          </a>
+        </li>
+        {% endif %}
       </ul>
       <ul class="navbar-nav ms-auto align-items-center gap-2">
         <!-- Language switcher -->
