@@ -29,6 +29,100 @@
           </div>
         </div>
         {% endif %}
+
+        {% if tx_type == "vendor_payment" %}
+        {# ── Custom smart layout for vendor payment ───────────────────── #}
+        <form method="post" id="txForm">
+          {% csrf_token %}
+          {% if locked_vendor %}
+          <input type="hidden" name="vendor" value="{{ locked_vendor.pk }}">
+          <input type="hidden" name="_vendor_pk" value="{{ locked_vendor.pk }}">
+          {% endif %}
+
+          {# Step 1: Date #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% trans "Date" %}</label>
+            {{ form.date }}
+            {% if form.date.errors %}<div class="text-danger small mt-1">{{ form.date.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# Step 2: Vendor (only if not pre-locked) #}
+          {% if not locked_vendor %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% trans "Vendor" %}</label>
+            {{ form.vendor }}
+            {% if form.vendor.errors %}<div class="text-danger small mt-1">{{ form.vendor.errors.0 }}</div>{% endif %}
+          </div>
+          {% endif %}
+
+          {# Step 3: Transaction currency (what currency is the bill in?) #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% trans "Bill Currency" %}</label>
+            <div class="form-text mb-1">{% trans "What currency was the original bill recorded in?" %}</div>
+            {{ form.currency }}
+            {% if form.currency.errors %}<div class="text-danger small mt-1">{{ form.currency.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# Outstanding hint — appears once vendor + currency are selected #}
+          <div id="outstanding-hint" class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-3" style="display:none!important">
+            <i class="bi bi-exclamation-circle-fill"></i>
+            <span id="outstanding-text"></span>
+          </div>
+
+          {# Step 4: Amount being paid (in the transaction currency) #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              {% trans "Amount to Pay" %}
+              <span id="amount-currency-badge" class="badge bg-secondary ms-1"></span>
+            </label>
+            {{ form.amount }}
+            {% if form.amount.errors %}<div class="text-danger small mt-1">{{ form.amount.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# Step 5: Cashbox — which cashbox to pay from #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% trans "Pay From" %}</label>
+            <div class="form-text mb-1">{% trans "Which cashbox will the money come from?" %}</div>
+            {{ form.cashbox }}
+            {% if form.cashbox.errors %}<div class="text-danger small mt-1">{{ form.cashbox.errors.0 }}</div>{% endif %}
+            <div id="cashbox-currency-hint" class="form-text mt-1"></div>
+          </div>
+
+          {# Step 6: Exchange rate — only shown when cashbox ≠ tx currency #}
+          <div id="exchange-rate-row" class="mb-3" style="display:none">
+            <label class="form-label fw-semibold">
+              {% trans "Exchange Rate" %}
+              <span id="rate-label" class="text-muted fw-normal small ms-1"></span>
+            </label>
+            <div class="form-text mb-1" id="rate-hint-text"></div>
+            {{ form.exchange_rate }}
+            {% if form.exchange_rate.errors %}<div class="text-danger small mt-1">{{ form.exchange_rate.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# Step 7: Optional description #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% trans "Description" %} <span class="text-muted fw-normal">({% trans "optional" %})</span></label>
+            {{ form.description }}
+          </div>
+
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-check-circle"></i> {% trans "Record" %}
+            </button>
+            {% if locked_vendor %}
+            <a href="{% url 'projects:vendor_detail' project_pk=project.pk pk=locked_vendor.pk %}" class="btn btn-outline-secondary">
+              {% trans "Cancel" %}
+            </a>
+            {% else %}
+            <a href="{% url 'projects:dashboard' pk=project.pk %}" class="btn btn-outline-secondary">
+              {% trans "Cancel" %}
+            </a>
+            {% endif %}
+          </div>
+        </form>
+
+        {% else %}
+        {# ── Generic form rendering for all other transaction types ──── #}
         <form method="post" id="txForm">
           {% csrf_token %}
           {% if locked_vendor %}
@@ -39,7 +133,6 @@
             {% if locked_vendor and field.name == "vendor" %}
             {# hidden above — skip the dropdown #}
             {% elif field.name == "use_base_currency" %}
-            <!-- Base Currency Toggle -->
             <div class="mb-3 p-3 bg-light rounded border">
               <div class="form-check form-switch">
                 {{ field }}
@@ -80,6 +173,8 @@
             {% endif %}
           </div>
         </form>
+        {% endif %}
+
       </div>
     </div>
   </div>
@@ -93,22 +188,136 @@
 {% endblock %}
 
 {% block extra_js %}
+{% if tx_type == "vendor_payment" %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  // Data injected by view
+  const cashboxData     = {{ cashbox_data_json|default:"{}" |safe }};
+  const currencyData    = {{ currency_data_json|default:"{}" |safe }};
+  const vendorPayable   = {{ vendor_payable_json|default:"{}" |safe }};
+  const baseCurrCode    = "{{ base_currency_code }}";
+  const baseCurrSymbol  = "{{ base_currency_sym }}";
+
+  // DOM refs
+  const cashboxSel      = document.getElementById("id_cashbox");
+  const currencySel     = document.getElementById("id_currency");
+  const vendorSel       = document.getElementById("id_vendor");  // null when locked
+  const amountInput     = document.getElementById("id_amount");
+  const rateInput       = document.getElementById("id_exchange_rate");
+  const rateRow         = document.getElementById("exchange-rate-row");
+  const rateLabel       = document.getElementById("rate-label");
+  const rateHintText    = document.getElementById("rate-hint-text");
+  const outstandingHint = document.getElementById("outstanding-hint");
+  const outstandingText = document.getElementById("outstanding-text");
+  const amountBadge     = document.getElementById("amount-currency-badge");
+  const cashboxHint     = document.getElementById("cashbox-currency-hint");
+
+  function selectedCurrency() {
+    // Returns {code, symbol} for the currently selected transaction currency.
+    const pk = currencySel && currencySel.value;
+    if (pk && currencyData[pk]) return currencyData[pk];
+    return { code: baseCurrCode, symbol: baseCurrSymbol };
+  }
+
+  function selectedCashboxCurrency() {
+    // Returns {code, symbol} for the currently selected cashbox, or null.
+    const pk = cashboxSel && cashboxSel.value;
+    if (pk && cashboxData[pk]) return cashboxData[pk];
+    return null;
+  }
+
+  function selectedVendorPk() {
+    if (vendorSel) return vendorSel.value;
+    // locked vendor: read from hidden input
+    const hidden = document.querySelector('input[name="vendor"]');
+    return hidden ? hidden.value : null;
+  }
+
+  function update() {
+    const txCurr  = selectedCurrency();
+    const cbCurr  = selectedCashboxCurrency();
+    const vendorPk = selectedVendorPk();
+
+    // -- Amount badge: show the currency label next to "Amount to Pay" --
+    amountBadge.textContent = txCurr.code;
+
+    // -- Cashbox currency hint --
+    if (cbCurr) {
+      cashboxHint.textContent = "\u{1F4B0} " + "{% trans 'This cashbox holds' %} " + cbCurr.code;
+      cashboxHint.className = "form-text mt-1 text-" + (cbCurr.code === txCurr.code ? "muted" : "info fw-semibold");
+    } else {
+      cashboxHint.textContent = "";
+    }
+
+    // -- Exchange rate row: show only when cashbox currency ≠ tx currency --
+    const needsRate = cbCurr && cbCurr.code !== txCurr.code;
+    rateRow.style.display = needsRate ? "" : "none";
+    if (needsRate) {
+      // Figure out which is the foreign currency and which is base
+      const foreignCode = txCurr.code !== baseCurrCode ? txCurr.code : cbCurr.code;
+      rateLabel.textContent = "(1 " + foreignCode + " = ? " + baseCurrCode + ")";
+      rateHintText.textContent = "{% trans 'How many' %} " + baseCurrCode
+        + " {% trans 'does 1' %} " + foreignCode + " {% trans 'equal today?' %}";
+      if (!rateInput.value || rateInput.value === "0" || rateInput.value === "1") {
+        rateInput.value = "";
+        rateInput.placeholder = "e.g. 62.00";
+      }
+      rateInput.required = true;
+    } else {
+      rateInput.required = false;
+    }
+
+    // -- Outstanding hint --
+    const vendorBalances = vendorPk ? (vendorPayable[vendorPk] || {}) : {};
+    const code = txCurr.code;
+    const bal  = vendorBalances[code];
+    if (bal && bal.amount > 0.005) {
+      outstandingText.textContent =
+        "{% trans 'Outstanding balance:' %} " +
+        (bal.symbol ? bal.symbol + "\u00a0" : "") +
+        bal.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) +
+        " " + code;
+      outstandingHint.style.display = "";
+    } else {
+      outstandingHint.style.display = "none";
+    }
+  }
+
+  if (cashboxSel)  cashboxSel.addEventListener("change", update);
+  if (currencySel) currencySel.addEventListener("change", update);
+  if (vendorSel)   vendorSel.addEventListener("change", update);
+
+  update();
+});
+</script>
+{% else %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   const checkbox = document.getElementById("id_use_base_currency");
   const currencyFields = document.querySelectorAll(".currency-field");
+  const cashboxSelect  = document.getElementById("id_cashbox");
+  const foreignCashboxes = {{ cashbox_currencies_json|default:"{}" |safe }};
+
+  function cashboxIsForeign() {
+    return cashboxSelect && foreignCashboxes[cashboxSelect.value] === true;
+  }
 
   function toggle() {
-    const isBase = checkbox && checkbox.checked;
+    const isBase    = checkbox && checkbox.checked;
+    const cbForeign = cashboxIsForeign();
     currencyFields.forEach(function (el) {
-      el.style.display = isBase ? "none" : "";
+      if (el.id === "field_exchange_rate") {
+        el.style.display = (!isBase || cbForeign) ? "" : "none";
+      } else {
+        el.style.display = isBase ? "none" : "";
+      }
     });
   }
 
-  if (checkbox) {
-    toggle();
-    checkbox.addEventListener("change", toggle);
-  }
+  if (checkbox)     checkbox.addEventListener("change", toggle);
+  if (cashboxSelect)cashboxSelect.addEventListener("change", toggle);
+  toggle();
 });
 </script>
+{% endif %}
 {% endblock %}

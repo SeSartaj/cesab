@@ -28,14 +28,14 @@ class InventoryPurchaseForm(forms.Form):
         ("vendor_bill", _("On Credit — Vendor Bill")),
     ]
 
+    date = forms.DateField(
+        widget=forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+        label=_("Date"),
+    )
     item = forms.ModelChoiceField(
         queryset=InventoryItem.objects.none(),
         widget=forms.Select(attrs={"class": "form-select"}),
         label=_("Item"),
-    )
-    date = forms.DateField(
-        widget=forms.DateInput(attrs={"class": "form-control", "type": "date"}),
-        label=_("Date"),
     )
     quantity = forms.DecimalField(
         max_digits=18, decimal_places=4,
@@ -47,17 +47,17 @@ class InventoryPurchaseForm(forms.Form):
         widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.000001", "min": "0"}),
         label=_("Unit Cost"),
     )
+    currency = forms.ModelChoiceField(
+        queryset=Currency.objects.filter(is_active=True),
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select"}),
+        label=_("Currency"),
+    )
     payment_method = forms.ChoiceField(
         choices=PAYMENT_METHODS,
         initial="cashbox",
         widget=forms.RadioSelect(attrs={"class": "form-check-input"}),
         label=_("Payment Method"),
-    )
-    cashbox = forms.ModelChoiceField(
-        queryset=Cashbox.objects.none(),
-        required=False,
-        widget=forms.Select(attrs={"class": "form-select"}),
-        label=_("Paid From"),
     )
     vendor = forms.ModelChoiceField(
         queryset=Vendor.objects.none(),
@@ -65,22 +65,11 @@ class InventoryPurchaseForm(forms.Form):
         widget=forms.Select(attrs={"class": "form-select"}),
         label=_("Vendor"),
     )
-    description = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={"class": "form-control"}),
-        label=_("Description"),
-    )
-    use_base_currency = forms.BooleanField(
-        required=False,
-        initial=True,
-        label=_("Base Currency"),
-        widget=forms.CheckboxInput(attrs={"class": "form-check-input", "id": "id_use_base_currency"}),
-    )
-    currency = forms.ModelChoiceField(
-        queryset=Currency.objects.filter(is_active=True),
+    cashbox = forms.ModelChoiceField(
+        queryset=Cashbox.objects.none(),
         required=False,
         widget=forms.Select(attrs={"class": "form-select"}),
-        label=_("Currency"),
+        label=_("Pay From"),
     )
     exchange_rate = forms.DecimalField(
         max_digits=18, decimal_places=6, initial=1,
@@ -88,12 +77,19 @@ class InventoryPurchaseForm(forms.Form):
         widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.000001", "min": "0"}),
         label=_("Exchange Rate"),
     )
+    description = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        label=_("Description"),
+    )
 
     def __init__(self, project, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["item"].queryset = InventoryItem.objects.filter(project=project, is_active=True)
         self.fields["cashbox"].queryset = Cashbox.objects.filter(project=project, is_active=True)
         self.fields["vendor"].queryset = Vendor.objects.filter(project=project, is_active=True)
+        # Pre-select base currency
+        self.fields["currency"].initial = project.base_currency
 
     def clean(self):
         cleaned = super().clean()

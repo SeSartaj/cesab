@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ title }}{% endblock %}
+{% block sidebar %}{% include "projects/_sidebar.html" with active="inventory" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-header">
+        <i class="bi bi-box-seam"></i> {{ title }}
+        <a href="{% url 'projects:inventory' project_pk=project.pk %}" class="btn btn-sm btn-light float-end">
+          <i class="bi bi-x"></i> {% trans "Cancel" %}
+        </a>
+      </div>
+      <div class="card-body">
+        <form method="post" id="purchaseForm">
+          {% csrf_token %}
+
+          {# ── Step 1: Date ────────────────────────────────────────── #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% trans "Date" %}</label>
+            {{ form.date }}
+            {% if form.date.errors %}<div class="text-danger small mt-1">{{ form.date.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# ── Step 2: What are you buying? ────────────────────────── #}
+          <div class="mb-3 p-3 bg-light rounded border">
+            <div class="fw-semibold mb-2"><i class="bi bi-box"></i> {% trans "What are you buying?" %}</div>
+            <div class="mb-2">
+              <label class="form-label">{% trans "Item" %}</label>
+              {{ form.item }}
+              {% if form.item.errors %}<div class="text-danger small mt-1">{{ form.item.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="row">
+              <div class="col-6">
+                <label class="form-label">{% trans "Quantity" %}</label>
+                {{ form.quantity }}
+                {% if form.quantity.errors %}<div class="text-danger small mt-1">{{ form.quantity.errors.0 }}</div>{% endif %}
+              </div>
+              <div class="col-6">
+                <label class="form-label">
+                  {% trans "Unit Cost" %}
+                  <span id="unit-cost-badge" class="badge bg-secondary ms-1"></span>
+                </label>
+                {{ form.unit_cost }}
+                {% if form.unit_cost.errors %}<div class="text-danger small mt-1">{{ form.unit_cost.errors.0 }}</div>{% endif %}
+              </div>
+            </div>
+            <div id="total-hint" class="form-text mt-2 fw-semibold" style="display:none">
+              <i class="bi bi-calculator"></i> {% trans "Total" %}: <span id="total-amount"></span>
+            </div>
+          </div>
+
+          {# ── Step 3: Currency ────────────────────────────────────── #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% trans "Purchase Currency" %}</label>
+            <div class="form-text mb-1">{% trans "What currency is the price in?" %}</div>
+            {{ form.currency }}
+            {% if form.currency.errors %}<div class="text-danger small mt-1">{{ form.currency.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# ── Step 4: How are you paying? ─────────────────────────── #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% trans "Payment Method" %}</label>
+            <div class="d-flex gap-3 flex-wrap">
+              {% for radio in form.payment_method %}
+              <div class="form-check">
+                {{ radio.tag }}
+                <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+              </div>
+              {% endfor %}
+            </div>
+            {% if form.payment_method.errors %}<div class="text-danger small mt-1">{{ form.payment_method.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# ── Step 5: Vendor (shown for vendor_bill and vendor_cash) #}
+          <div id="vendor-row" class="mb-3" style="display:none">
+            <label class="form-label fw-semibold">{% trans "Vendor" %}</label>
+            {{ form.vendor }}
+            {% if form.vendor.errors %}<div class="text-danger small mt-1">{{ form.vendor.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# ── Step 6: Cashbox (shown for cashbox and vendor_cash) ── #}
+          <div id="cashbox-row" class="mb-3" style="display:none">
+            <label class="form-label fw-semibold">{% trans "Pay From" %}</label>
+            <div class="form-text mb-1">{% trans "Which cashbox will the money come from?" %}</div>
+            {{ form.cashbox }}
+            {% if form.cashbox.errors %}<div class="text-danger small mt-1">{{ form.cashbox.errors.0 }}</div>{% endif %}
+            <div id="cashbox-currency-hint" class="form-text mt-1"></div>
+          </div>
+
+          {# ── Step 7: Exchange rate (only when currencies mismatch) ─ #}
+          <div id="exchange-rate-row" class="mb-3" style="display:none">
+            <label class="form-label fw-semibold">
+              {% trans "Exchange Rate" %}
+              <span id="rate-label" class="text-muted fw-normal small ms-1"></span>
+            </label>
+            <div class="form-text mb-1" id="rate-hint-text"></div>
+            {{ form.exchange_rate }}
+            {% if form.exchange_rate.errors %}<div class="text-danger small mt-1">{{ form.exchange_rate.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# ── Step 8: Description ─────────────────────────────────── #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% trans "Description" %} <span class="text-muted fw-normal">({% trans "optional" %})</span></label>
+            {{ form.description }}
+          </div>
+
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-check-circle"></i> {% trans "Record" %}
+            </button>
+            <a href="{% url 'projects:inventory' project_pk=project.pk %}" class="btn btn-outline-secondary">
+              {% trans "Cancel" %}
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  /* ── Data from view ──────────────────────────────────────────────── */
+  const cashboxData    = {{ cashbox_data_json|default:"{}" |safe }};
+  const currencyData   = {{ currency_data_json|default:"{}" |safe }};
+  const baseCurrCode   = "{{ base_currency_code }}";
+  const baseCurrSymbol = "{{ base_currency_sym }}";
+
+  /* ── DOM refs ────────────────────────────────────────────────────── */
+  const currencySel    = document.getElementById("id_currency");
+  const cashboxSel     = document.getElementById("id_cashbox");
+  const vendorSel      = document.getElementById("id_vendor");
+  const qtyInput       = document.getElementById("id_quantity");
+  const costInput      = document.getElementById("id_unit_cost");
+  const rateInput      = document.getElementById("id_exchange_rate");
+  const paymentRadios  = document.querySelectorAll("input[name='payment_method']");
+
+  const vendorRow      = document.getElementById("vendor-row");
+  const cashboxRow     = document.getElementById("cashbox-row");
+  const rateRow        = document.getElementById("exchange-rate-row");
+  const rateLabel      = document.getElementById("rate-label");
+  const rateHintText   = document.getElementById("rate-hint-text");
+  const cashboxHint    = document.getElementById("cashbox-currency-hint");
+  const unitCostBadge  = document.getElementById("unit-cost-badge");
+  const totalHint      = document.getElementById("total-hint");
+  const totalAmount    = document.getElementById("total-amount");
+
+  /* ── Helpers ─────────────────────────────────────────────────────── */
+  function selectedCurrency() {
+    const pk = currencySel && currencySel.value;
+    if (pk && currencyData[pk]) return currencyData[pk];
+    return { code: baseCurrCode, symbol: baseCurrSymbol };
+  }
+
+  function selectedCashboxCurrency() {
+    const pk = cashboxSel && cashboxSel.value;
+    if (pk && cashboxData[pk]) return cashboxData[pk];
+    return null;
+  }
+
+  function selectedMethod() {
+    const checked = document.querySelector("input[name='payment_method']:checked");
+    return checked ? checked.value : "cashbox";
+  }
+
+  /* ── Main update ─────────────────────────────────────────────────── */
+  function update() {
+    const txCurr = selectedCurrency();
+    const cbCurr = selectedCashboxCurrency();
+    const method = selectedMethod();
+
+    /* Payment method → show/hide vendor & cashbox */
+    const needsCashbox = (method === "cashbox" || method === "vendor_cash");
+    const needsVendor  = (method === "vendor_bill" || method === "vendor_cash");
+    cashboxRow.style.display = needsCashbox ? "" : "none";
+    vendorRow.style.display  = needsVendor  ? "" : "none";
+
+    /* Currency badge on unit cost */
+    unitCostBadge.textContent = txCurr.code;
+
+    /* Cashbox currency hint */
+    if (needsCashbox && cbCurr) {
+      cashboxHint.textContent = "\u{1F4B0} " + "{% trans 'This cashbox holds' %} " + cbCurr.code;
+      cashboxHint.className = "form-text mt-1 text-" + (cbCurr.code === txCurr.code ? "muted" : "info fw-semibold");
+    } else {
+      cashboxHint.textContent = "";
+    }
+
+    /* Exchange rate — show when:
+         - purchase is in a foreign currency (txCurr ≠ base), OR
+         - cashbox is in a different currency than purchase currency */
+    var needsRate = false;
+    if (txCurr.code !== baseCurrCode) {
+      needsRate = true;
+    } else if (needsCashbox && cbCurr && cbCurr.code !== txCurr.code) {
+      needsRate = true;
+    }
+
+    rateRow.style.display = needsRate ? "" : "none";
+    if (needsRate) {
+      const foreignCode = txCurr.code !== baseCurrCode ? txCurr.code : (cbCurr ? cbCurr.code : "???");
+      rateLabel.textContent = "(1 " + foreignCode + " = ? " + baseCurrCode + ")";
+      rateHintText.textContent = "{% trans 'How many' %} " + baseCurrCode
+        + " {% trans 'does 1' %} " + foreignCode + " {% trans 'equal today?' %}";
+      if (!rateInput.value || rateInput.value === "0" || rateInput.value === "1") {
+        rateInput.value = "";
+        rateInput.placeholder = "e.g. 63.00";
+      }
+      rateInput.required = true;
+    } else {
+      rateInput.required = false;
+    }
+
+    /* Live total */
+    updateTotal(txCurr);
+  }
+
+  function updateTotal(txCurr) {
+    const qty  = parseFloat(qtyInput && qtyInput.value) || 0;
+    const cost = parseFloat(costInput && costInput.value) || 0;
+    const total = qty * cost;
+    if (total > 0) {
+      totalAmount.textContent =
+        (txCurr.symbol ? txCurr.symbol + "\u00a0" : "") +
+        total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) +
+        " " + txCurr.code;
+      totalHint.style.display = "";
+    } else {
+      totalHint.style.display = "none";
+    }
+  }
+
+  /* ── Event listeners ─────────────────────────────────────────────── */
+  if (currencySel)   currencySel.addEventListener("change", update);
+  if (cashboxSel)    cashboxSel.addEventListener("change", update);
+  if (qtyInput)      qtyInput.addEventListener("input", function(){ updateTotal(selectedCurrency()); });
+  if (costInput)     costInput.addEventListener("input", function(){ updateTotal(selectedCurrency()); });
+  paymentRadios.forEach(function (r) { r.addEventListener("change", update); });
+
+  update();
+});
+</script>
+{% endblock %}

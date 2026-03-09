@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Exists, OuterRef
 from django.utils.translation import gettext_lazy as _
 from decimal import Decimal
 
@@ -40,10 +41,10 @@ class InventoryItem(models.Model):
         return f"{self.name} ({self.unit})"
 
     def quantity_on_hand(self):
-        """Calculate current quantity from movements."""
+        """Calculate current quantity from active (non-corrected) movements."""
         from decimal import Decimal
         qty = Decimal("0")
-        for mv in self.movements.all():
+        for mv in self.movements.active():
             if mv.movement_type in ("purchase", "adjustment", "contribution"):
                 qty += mv.quantity
             elif mv.movement_type == "consumption":
@@ -51,11 +52,11 @@ class InventoryItem(models.Model):
         return qty
 
     def weighted_average_cost(self):
-        """Weighted average unit cost from all inbound movements."""
+        """Weighted average unit cost from active (non-corrected) inbound movements."""
         from decimal import Decimal
         total_qty = Decimal("0")
         total_cost = Decimal("0")
-        for mv in self.movements.filter(movement_type__in=("purchase", "adjustment", "contribution")):
+        for mv in self.movements.active().filter(movement_type__in=("purchase", "adjustment", "contribution")):
             if mv.quantity > 0:
                 total_qty += mv.quantity
                 total_cost += mv.total_cost
@@ -64,7 +65,25 @@ class InventoryItem(models.Model):
         return (total_cost / total_qty).quantize(Decimal("0.000001"))
 
 
+class InventoryMovementQuerySet(models.QuerySet):
+    def active(self):
+        """
+        Mirror JournalLineQuerySet.active(): exclude movements whose journal
+        entry is itself a correction, or has already been corrected by another
+        entry. Both legs of a correction pair net to zero economic activity.
+        """
+        from journal.models import JournalEntry
+        is_corrected = Exists(
+            JournalEntry.objects.filter(corrects_id=OuterRef("journal_entry_id"))
+        )
+        return self.filter(
+            journal_entry__corrects__isnull=True,  # not itself a correction
+        ).exclude(is_corrected)                    # not been corrected
+
+
 class InventoryMovement(models.Model):
+    objects = InventoryMovementQuerySet.as_manager()
+
     MOVEMENT_TYPES = [
         ("purchase", _("Purchase")),
         ("consumption", _("Consumption")),

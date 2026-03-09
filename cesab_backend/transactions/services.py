@@ -29,7 +29,15 @@ def _check_cashbox_balance(cashbox, amount_bc):
         )
 
 
-def _add_line(je, account, debit=0, credit=0, currency=None, exchange_rate=1):
+def _add_line(je, account, debit=0, credit=0, currency=None, exchange_rate=1,
+              debit_bc=None, credit_bc=None):
+    """Create a JournalLine.
+
+    *debit* / *credit* are **transaction-currency** amounts.
+    BC is normally computed as TC × rate, but callers can pass explicit
+    *debit_bc* / *credit_bc* to avoid round-trip rounding drift
+    (e.g. when TC was derived by dividing a BC amount by the rate).
+    """
     if currency is None:
         currency = je.project.base_currency
     rate = Decimal(str(exchange_rate))
@@ -38,8 +46,8 @@ def _add_line(je, account, debit=0, credit=0, currency=None, exchange_rate=1):
     JournalLine.objects.create(
         journal_entry=je,
         account=account,
-        debit=d * rate if rate != 1 else d,
-        credit=c * rate if rate != 1 else c,
+        debit=Decimal(str(debit_bc)) if debit_bc is not None else (d * rate if rate != 1 else d),
+        credit=Decimal(str(credit_bc)) if credit_bc is not None else (c * rate if rate != 1 else c),
         transaction_currency=currency,
         exchange_rate=rate,
         debit_tc=d,
@@ -101,11 +109,12 @@ def vendor_advance_payment(project, user, date, vendor, amount, cashbox,
     Cr. Cashbox Account
     """
     currency = currency or project.base_currency
-    _check_cashbox_balance(cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
+    cashbox_bc = (Decimal(str(amount)) * Decimal(str(exchange_rate))).quantize(Decimal("0.01"))
+    _check_cashbox_balance(cashbox, cashbox_bc)
     je = _create_je(project, user, date, description or f"Advance to {vendor.name}",
                     "vendor_advance")
     _add_line(je, vendor.advance_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
-    _add_line(je, cashbox.account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    _add_line(je, cashbox.account, credit=cashbox_bc, currency=project.base_currency, exchange_rate=1)
     return je
 
 
@@ -113,15 +122,24 @@ def vendor_payment_against_bill(project, user, date, vendor, amount, cashbox,
                                 description="", currency=None, exchange_rate=1):
     """
     Payment against vendor bill.
-    The payable is reduced by the BC value of what's actually paid.
-    When the payable is in a FOREIGN currency (e.g. bill was recorded in USD),
-    any difference between the booking rate and the payment rate goes to FX Gain/Loss.
-    When the payable is in BASE currency, there is no FX difference.
 
-    Dr. Vendor Payable Account   (BC equivalent, at booking rate if foreign)
-    Dr. FX Loss Account          (only when bill was in foreign currency and rate moved against us)
-    Cr. FX Gain Account          (only when bill was in foreign currency and rate moved in our favour)
-    Cr. Cashbox Account          (at current payment rate)
+    Two cashbox scenarios for a foreign-currency (e.g. USD) payable:
+
+    A) Same-currency cashbox (USD cashbox paying a USD bill):
+       No conversion happens at payment time.  The caller need not supply an
+       exchange rate — the original booking rate is used automatically.
+       Dr. Vendor Payable   (amount_tc × bill_rate  → BC)
+       Cr. USD Cashbox      (amount_tc × bill_rate  → BC, TC in USD)
+
+    B) Base-currency cashbox (AFN cashbox paying a USD bill):
+       The user supplies today's exchange rate.  Any difference vs the booking
+       rate goes to FX Gain / FX Loss.
+       Dr. Vendor Payable   (amount_tc × bill_rate  → BC)
+       Dr. FX Loss          (only when paying at a worse rate than booked)
+       Cr. FX Gain          (only when paying at a better rate than booked)
+       Cr. AFN Cashbox      (amount_tc × payment_rate → BC, TC in AFN)
+
+    When the payable is already in base currency there is no FX difference.
     """
     from coa.services import get_or_create_fx_accounts
     from django.db.models import Sum
@@ -130,16 +148,18 @@ def vendor_payment_against_bill(project, user, date, vendor, amount, cashbox,
     payment_rate = Decimal(str(exchange_rate))
     amount_tc = Decimal(str(amount))
 
-    # BC amount actually leaving the cashbox
-    cashbox_bc = (amount_tc * payment_rate).quantize(Decimal("0.01"))
-
     bill_rate = Decimal("1")
     fx_diff   = Decimal("0")
-    payable_in_foreign = False  # whether the outstanding payable is in a foreign currency
+    payable_in_foreign = False
+    cashbox_bc = Decimal("0")  # BC amount leaving the cashbox
 
-    if payment_rate != Decimal("1"):
-        # Only need to look up bill rate when the payment is in a foreign currency
-        agg = JournalLine.objects.active().filter(account=vendor.payable_account).aggregate(
+    if currency != project.base_currency:
+        # Scenarios A / B: the bill was recorded in a foreign currency.
+        # Aggregate only lines in the payment currency to avoid mixing AFN+USD totals.
+        agg = JournalLine.objects.active().filter(
+            account=vendor.payable_account,
+            transaction_currency=currency,
+        ).aggregate(
             bc_credit=Sum("credit"),
             bc_debit=Sum("debit"),
             tc_credit=Sum("credit_tc"),
@@ -148,12 +168,34 @@ def vendor_payment_against_bill(project, user, date, vendor, amount, cashbox,
         outstanding_bc = (agg["bc_credit"] or Decimal("0")) - (agg["bc_debit"] or Decimal("0"))
         outstanding_tc = (agg["tc_credit"] or Decimal("0")) - (agg["tc_debit"] or Decimal("0"))
 
-        # If bc != tc the payable was booked in a foreign currency — compute FX diff
-        if outstanding_tc > Decimal("0") and abs(outstanding_bc - outstanding_tc) > Decimal("0.01"):
+        if outstanding_tc > Decimal("0"):
             payable_in_foreign = True
             bill_rate = (outstanding_bc / outstanding_tc).quantize(Decimal("0.000001"))
+
+            # Scenario A: same-currency cashbox (e.g. USD cashbox paying a USD bill).
+            # Auto-use the booking rate — caller need not supply an exchange rate.
+            if cashbox.currency == currency:
+                payment_rate = bill_rate
+
             payable_debit_bc = (amount_tc * bill_rate).quantize(Decimal("0.01"))
-            fx_diff = payable_debit_bc - cashbox_bc  # >0 = gain, <0 = loss
+            cashbox_bc       = (amount_tc * payment_rate).quantize(Decimal("0.01"))
+            fx_diff          = payable_debit_bc - cashbox_bc  # >0 = gain, <0 = loss
+
+    elif cashbox.currency != project.base_currency:
+        # Scenario C: bill is in base currency (AFN) but cashbox is foreign (USD).
+        # The user supplies the spot rate (BC per 1 cashbox-currency unit).
+        # We work out how many foreign units the cashbox gives up to cover the AFN payable.
+        if payment_rate <= Decimal("0"):
+            raise ValueError("Exchange rate must be greater than zero.")
+        cashbox_foreign_tc = (amount_tc / payment_rate).quantize(Decimal("0.01"))
+        # Pin BC to the exact payable amount — do NOT recompute from the
+        # rounded cashbox_foreign_tc, which introduces a round-trip error
+        # (e.g. 491 000 / 63 → 7 793.65 → × 63 = 490 999.95).
+        cashbox_bc = amount_tc
+
+    else:
+        # Normal: both bill and cashbox are in base currency — no conversion.
+        cashbox_bc = amount_tc
 
     _check_cashbox_balance(cashbox, cashbox_bc)
 
@@ -162,14 +204,12 @@ def vendor_payment_against_bill(project, user, date, vendor, amount, cashbox,
 
     # Reduce payable
     if payable_in_foreign:
-        # Bill was in a foreign currency: debit payable at the original booking rate (in TC)
         _add_line(je, vendor.payable_account, debit=amount_tc, currency=currency, exchange_rate=bill_rate)
     else:
-        # Bill was in base currency: simply debit the exact BC amount being paid
         _add_line(je, vendor.payable_account, debit=cashbox_bc,
                   currency=project.base_currency, exchange_rate=1)
 
-    # Book exchange difference if any (only for foreign-currency payables)
+    # Book exchange difference if any (only for foreign-currency payables, scenario B)
     if fx_diff != Decimal("0"):
         gain_acc, loss_acc = get_or_create_fx_accounts(project)
         if fx_diff > 0:
@@ -179,8 +219,25 @@ def vendor_payment_against_bill(project, user, date, vendor, amount, cashbox,
             _add_line(je, loss_acc, debit=-fx_diff,
                       currency=project.base_currency, exchange_rate=1)
 
-    # Pay from cashbox at the current payment rate
-    _add_line(je, cashbox.account, credit=amount_tc, currency=currency, exchange_rate=payment_rate)
+    # Cashbox line — record in the cashbox's own currency so TC balances are meaningful.
+    #   Scenario A (USD cashbox, USD bill): TC = amount_tc USD
+    #   Scenario B (AFN cashbox, USD bill): TC = cashbox_bc AFN
+    #   Scenario C (USD cashbox, AFN bill): TC = cashbox_foreign_tc USD  (computed above)
+    #   Normal    (AFN cashbox, AFN bill): TC = cashbox_bc AFN
+    if cashbox.currency != project.base_currency:
+        if payable_in_foreign:
+            # Scenarios A/B: amount_tc is already expressed in the foreign bill currency.
+            _add_line(je, cashbox.account, credit=amount_tc,
+                      currency=cashbox.currency, exchange_rate=payment_rate)
+        else:
+            # Scenario C: amount_tc is AFN; give the pre-computed foreign TC amount.
+            # Pass credit_bc to pin BC to the exact payable (avoids rounding drift).
+            _add_line(je, cashbox.account, credit=cashbox_foreign_tc,
+                      currency=cashbox.currency, exchange_rate=payment_rate,
+                      credit_bc=amount_tc)
+    else:
+        _add_line(je, cashbox.account, credit=cashbox_bc,
+                  currency=project.base_currency, exchange_rate=1)
 
     return je
 
@@ -468,12 +525,13 @@ def vendor_direct_payment(project, user, date, vendor, expense_account, amount, 
     Cr. Cashbox Account
     """
     currency = currency or project.base_currency
-    _check_cashbox_balance(cashbox, Decimal(str(amount)) * Decimal(str(exchange_rate)))
+    cashbox_bc = (Decimal(str(amount)) * Decimal(str(exchange_rate))).quantize(Decimal("0.01"))
+    _check_cashbox_balance(cashbox, cashbox_bc)
     je = _create_je(project, user, date,
                     description or f"Direct payment to {vendor.name}",
                     "vendor_direct_payment")
     _add_line(je, expense_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
-    _add_line(je, cashbox.account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    _add_line(je, cashbox.account, credit=cashbox_bc, currency=project.base_currency, exchange_rate=1)
     return je
 
 
@@ -485,10 +543,11 @@ def vendor_refund(project, user, date, vendor, amount, cashbox,
     Cr. Vendor Payable Account
     """
     currency = currency or project.base_currency
+    cashbox_bc = (Decimal(str(amount)) * Decimal(str(exchange_rate))).quantize(Decimal("0.01"))
     je = _create_je(project, user, date,
                     description or f"Refund from {vendor.name}",
                     "vendor_refund")
-    _add_line(je, cashbox.account, debit=amount, currency=currency, exchange_rate=exchange_rate)
+    _add_line(je, cashbox.account, debit=cashbox_bc, currency=project.base_currency, exchange_rate=1)
     _add_line(je, vendor.payable_account, credit=amount, currency=currency, exchange_rate=exchange_rate)
     return je
 

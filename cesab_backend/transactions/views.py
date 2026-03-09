@@ -223,7 +223,7 @@ def vendor_payment(request, project_pk):
 
     initial_vendor_pk = request.GET.get("vendor")
     locked_vendor = None
-    initial = {"date": timezone.now().date(), "use_base_currency": True}
+    initial = {"date": timezone.now().date()}
     if initial_vendor_pk:
         try:
             locked_vendor = Vendor.objects.get(pk=initial_vendor_pk, project=project)
@@ -235,9 +235,14 @@ def vendor_payment(request, project_pk):
         form = tx_forms.VendorPaymentForm(project, request.POST)
         if form.is_valid():
             d = form.cleaned_data
-            use_base = d.get("use_base_currency", True)
-            currency = None if use_base else d.get("currency")
-            exchange_rate = 1 if use_base else (d.get("exchange_rate") or 1)
+            # Currency is always explicitly selected; default to base if omitted.
+            currency = d.get("currency") or project.base_currency
+            cashbox_obj = d.get("cashbox")
+            # Exchange rate is only meaningful when the cashbox currency
+            # differs from the transaction currency — otherwise ignored.
+            exchange_rate = 1
+            if cashbox_obj and cashbox_obj.currency != currency:
+                exchange_rate = d.get("exchange_rate") or 1
             try:
                 svc.vendor_payment_against_bill(
                     project=project, user=request.user,
@@ -256,11 +261,53 @@ def vendor_payment(request, project_pk):
     else:
         form = tx_forms.VendorPaymentForm(project, initial=initial)
 
+    # --- Build JSON data for the smart form JS ---
+
+    # Cashbox map: pk → {code, symbol}
+    cashbox_data = {
+        str(cb.pk): {"code": cb.currency.code, "symbol": cb.currency.symbol or ""}
+        for cb in Cashbox.objects.filter(project=project, is_active=True).select_related("currency")
+    }
+
+    # Currency map: pk → {code, symbol}
+    from core.models import Currency as CurrencyModel
+    currency_data = {
+        str(c.pk): {"code": c.code, "symbol": c.symbol or ""}
+        for c in CurrencyModel.objects.filter(is_active=True)
+    }
+
+    # Per-vendor outstanding payable, grouped by currency:
+    # { vendor_pk: { currency_code: {amount, symbol} } }
+    from django.db.models import Sum as DbSum
+    vendor_payable = {}
+    for v in Vendor.objects.filter(project=project, is_active=True).select_related("payable_account"):
+        rows = (
+            JournalLine.objects.active()
+            .filter(account=v.payable_account)
+            .values("transaction_currency__code", "transaction_currency__symbol")
+            .annotate(cr=DbSum("credit_tc"), dr=DbSum("debit_tc"))
+        )
+        balances = {}
+        for row in rows:
+            code = row["transaction_currency__code"]
+            from decimal import Decimal
+            net = float((row["cr"] or Decimal("0")) - (row["dr"] or Decimal("0")))
+            if net > 0.005:
+                balances[code] = {"amount": net, "symbol": row["transaction_currency__symbol"] or ""}
+        if balances:
+            vendor_payable[str(v.pk)] = balances
+
     return render(request, "transactions/tx_form.html", {
-        "project": project, "form": form,
-        "title": _("Vendor Payment Against Bill"),
-        "tx_type": "vendor_payment",
-        "locked_vendor": locked_vendor,
+        "project":            project,
+        "form":               form,
+        "title":              _("Vendor Payment Against Bill"),
+        "tx_type":            "vendor_payment",
+        "locked_vendor":      locked_vendor,
+        "cashbox_data_json":  json.dumps(cashbox_data),
+        "currency_data_json": json.dumps(currency_data),
+        "vendor_payable_json":json.dumps(vendor_payable),
+        "base_currency_code": project.base_currency.code,
+        "base_currency_sym":  project.base_currency.symbol or "",
     })
 
 

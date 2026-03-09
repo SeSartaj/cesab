@@ -95,8 +95,32 @@ class VendorDetailView(LoginRequiredMixin, DetailView):
 
         net_payable = total_billed - total_paid - total_refunded
 
+        # --- Per-currency payable breakdown ---
+        # Net owed in each transaction currency (credit_tc - debit_tc per currency)
+        currency_rows = (
+            JournalLine.objects.active()
+            .filter(account=vendor.payable_account)
+            .values("transaction_currency__code", "transaction_currency__symbol")
+            .annotate(
+                total_credit_tc=Sum("credit_tc"),
+                total_debit_tc=Sum("debit_tc"),
+            )
+            .order_by("transaction_currency__code")
+        )
+        payable_by_currency = []
+        for row in currency_rows:
+            net_tc = (row["total_credit_tc"] or Decimal("0")) - (row["total_debit_tc"] or Decimal("0"))
+            if abs(net_tc) >= Decimal("0.01"):
+                payable_by_currency.append({
+                    "code": row["transaction_currency__code"],
+                    "symbol": row["transaction_currency__symbol"] or "",
+                    "net_tc": net_tc,
+                    "billed_tc": row["total_credit_tc"] or Decimal("0"),
+                    "paid_tc": row["total_debit_tc"] or Decimal("0"),
+                })
+
         # --- Direct cash purchases (vendor_cash payment method) ---
-        cash_movements = InventoryMovement.objects.filter(
+        cash_movements = InventoryMovement.objects.active().filter(
             vendor=vendor, movement_type="purchase",
         ).select_related("journal_entry")
         total_cash_direct = cash_movements.aggregate(
@@ -129,20 +153,45 @@ class VendorDetailView(LoginRequiredMixin, DetailView):
         vendor_entries = JournalEntry.objects.filter(
             project=vendor.project,
             id__in=all_je_ids,
-        ).prefetch_related("lines").order_by("-date", "-id")[:20]
+        ).prefetch_related("lines__transaction_currency").order_by("-date", "-id")[:20]
+
+        # Enrich each JE with per-currency TC amounts from payable/advance lines.
+        # Grouping by currency avoids meaningless cross-currency sums (e.g. USD + AFN).
+        vendor_account_ids = {vendor.payable_account_id, vendor.advance_account_id}
+        enriched_entries = []
+        for je in vendor_entries:
+            rel_lines = [l for l in je.lines.all() if l.account_id in vendor_account_ids]
+            by_currency = {}
+            for line in rel_lines:
+                code = line.transaction_currency.code
+                if code not in by_currency:
+                    by_currency[code] = {"charged": Decimal("0"), "paid": Decimal("0")}
+                by_currency[code]["charged"] += line.credit_tc  # credit on payable = you owe more
+                by_currency[code]["paid"]    += line.debit_tc   # debit on payable  = you paid
+            # Build sorted list, suppressing zero amounts
+            amounts = [
+                {"currency": code, "charged": v["charged"], "paid": v["paid"]}
+                for code, v in sorted(by_currency.items())
+                if v["charged"] or v["paid"]
+            ]
+            enriched_entries.append({
+                "je": je,
+                "amounts": amounts,
+            })
 
         ctx.update({
-            "total_billed":       total_billed,
-            "total_paid":         total_paid,
-            "total_refunded":     total_refunded,
-            "net_payable":        net_payable,
-            "total_advances":     total_advances,
-            "total_settled":      total_settled,
-            "net_advance":        net_advance,
-            "net_due":            net_due,
-            "total_cash_direct":  total_cash_direct,
-            "total_ever_paid":    total_ever_paid,
-            "vendor_entries":     vendor_entries,
+            "total_billed":         total_billed,
+            "total_paid":           total_paid,
+            "total_refunded":       total_refunded,
+            "net_payable":          net_payable,
+            "total_advances":       total_advances,
+            "total_settled":        total_settled,
+            "net_advance":          net_advance,
+            "net_due":              net_due,
+            "total_cash_direct":    total_cash_direct,
+            "total_ever_paid":      total_ever_paid,
+            "vendor_entries":       enriched_entries,
+            "payable_by_currency":  payable_by_currency,
         })
         return ctx
 

@@ -5,8 +5,12 @@ from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
+import json
+
 from projects.models import Project
 from projects.permissions import can_access_financial
+from cash.models import Cashbox
+from core.models import Currency
 from .models import InventoryItem, InventoryMovement
 from . import forms as inv_forms
 from . import services as svc
@@ -65,13 +69,31 @@ def inventory_purchase(request, project_pk):
     if denied:
         return denied
 
+    # ── Build JSON context for smart JS ──────────────────────────────
+    cashbox_qs = Cashbox.objects.filter(project=project, is_active=True)
+    cashbox_data = {
+        str(cb.pk): {"code": cb.currency.code, "symbol": cb.currency.symbol}
+        for cb in cashbox_qs.select_related("currency")
+    }
+    currency_data = {
+        str(c.pk): {"code": c.code, "symbol": c.symbol}
+        for c in Currency.objects.filter(is_active=True)
+    }
+
+    base_ctx = {
+        "cashbox_data_json": json.dumps(cashbox_data),
+        "currency_data_json": json.dumps(currency_data),
+        "base_currency_code": project.base_currency.code,
+        "base_currency_sym": project.base_currency.symbol,
+    }
+
     if request.method == "POST":
         form = inv_forms.InventoryPurchaseForm(project, request.POST)
         if form.is_valid():
             d = form.cleaned_data
-            use_base = d.get("use_base_currency", True)
-            currency = None if use_base else d.get("currency")
-            exchange_rate = 1 if use_base else (d.get("exchange_rate") or 1)
+            currency = d.get("currency") or project.base_currency
+            # Exchange rate: only meaningful when currencies differ
+            exchange_rate = d.get("exchange_rate") or 1
             try:
                 if d["payment_method"] == "vendor_bill":
                     svc.record_inventory_purchase_on_credit(
@@ -102,24 +124,28 @@ def inventory_purchase(request, project_pk):
                     )
             except ValueError as e:
                 messages.error(request, str(e))
-                return render(request, "inventory/movement_form.html", {
+                return render(request, "inventory/purchase_form.html", {
                     "project": project,
                     "form": form,
                     "title": _("Inventory Purchase"),
-                    "show_currency": True,
+                    **base_ctx,
                 })
             messages.success(request, _("Inventory purchase recorded."))
             return redirect(reverse("projects:inventory", kwargs={"project_pk": project_pk}))
     else:
         form = inv_forms.InventoryPurchaseForm(
-            project, initial={"date": timezone.now().date(), "use_base_currency": True, "payment_method": "cashbox"}
+            project, initial={
+                "date": timezone.now().date(),
+                "payment_method": "cashbox",
+                "currency": project.base_currency,
+            }
         )
 
-    return render(request, "inventory/movement_form.html", {
+    return render(request, "inventory/purchase_form.html", {
         "project": project,
         "form": form,
         "title": _("Inventory Purchase"),
-        "show_currency": True,
+        **base_ctx,
     })
 
 

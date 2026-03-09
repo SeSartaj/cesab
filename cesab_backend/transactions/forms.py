@@ -154,6 +154,12 @@ class VendorPaymentForm(BaseTxForm):
         super().__init__(*args, **kwargs)
         self.fields["vendor"].queryset = Vendor.objects.filter(project=project, is_active=True)
         self.fields["cashbox"].queryset = Cashbox.objects.filter(project=project, is_active=True)
+        # Pre-select base currency so the dropdown defaults to the right choice
+        if not args and "initial" not in kwargs:
+            self.fields["currency"].initial = project.base_currency
+        elif "initial" not in kwargs:
+            pass  # POST — don't override
+        self.fields["currency"].initial = project.base_currency
 
 
 class CashExpenseForm(BaseTxForm):

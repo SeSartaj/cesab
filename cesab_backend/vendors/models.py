@@ -49,7 +49,7 @@ class Vendor(models.Model):
         bill_paid = JournalLine.objects.active().filter(
             account=self.payable_account
         ).aggregate(v=Sum("debit"))["v"] or Decimal("0")
-        cash_direct = InventoryMovement.objects.filter(
+        cash_direct = InventoryMovement.objects.active().filter(
             vendor=self, movement_type="purchase"
         ).aggregate(v=Sum("total_cost"))["v"] or Decimal("0")
         return bill_paid + cash_direct
@@ -58,7 +58,7 @@ class Vendor(models.Model):
         """Total cost of inventory purchased directly with cash from this vendor."""
         from inventory.models import InventoryMovement
         from django.db.models import Sum
-        result = InventoryMovement.objects.filter(
+        result = InventoryMovement.objects.active().filter(
             vendor=self,
             movement_type="purchase",
         ).aggregate(v=Sum("total_cost"))["v"]

@@ -116,6 +116,37 @@
 </div>
 {% endif %}
 
+<!-- Balance by Currency -->
+{% if payable_by_currency %}
+<div class="card mb-4">
+  <div class="card-header"><i class="bi bi-currency-exchange"></i> {% trans "Balance by Currency" %}</div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th>{% trans "Currency" %}</th>
+          <th class="text-end">{% trans "Billed (TC)" %}</th>
+          <th class="text-end">{% trans "Paid (TC)" %}</th>
+          <th class="text-end">{% trans "Net Owed (TC)" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in payable_by_currency %}
+        <tr>
+          <td><span class="badge bg-secondary">{{ row.code }}</span></td>
+          <td class="text-end">{{ row.billed_tc|floatformat:2 }}</td>
+          <td class="text-end text-success">{{ row.paid_tc|floatformat:2 }}</td>
+          <td class="text-end fw-bold {% if row.net_tc > 0 %}text-danger{% else %}text-success{% endif %}">
+            {% if row.symbol %}{{ row.symbol }} {% endif %}{{ row.net_tc|floatformat:2 }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
 <!-- Transaction History -->
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
@@ -129,28 +160,49 @@
   </div>
   {% if vendor_entries %}
   <div class="card-body p-0">
-    <table class="table table-sm table-hover mb-0 small">
+    <table class="table table-sm table-hover mb-0 small align-middle">
       <thead class="table-light">
         <tr>
           <th>{% trans "Date" %}</th>
-          <th>{% trans "JE#" %}</th>
-          <th>{% trans "Type" %}</th>
+          <th>{% trans "What Happened" %}</th>
           <th>{% trans "Description" %}</th>
-          <th class="text-end">{% trans "Amount" %}</th>
+          <th class="text-end text-danger">{% trans "Charged to You" %}</th>
+          <th class="text-end text-success">{% trans "You Paid / Settled" %}</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
-        {% for je in vendor_entries %}
+        {% for row in vendor_entries %}
         <tr>
-          <td class="text-nowrap">{{ je.date }}</td>
-          <td class="fw-semibold">JE-{{ je.pk|stringformat:"04d" }}</td>
-          <td><span class="badge bg-secondary">{{ je.get_transaction_type_display }}</span></td>
-          <td>{{ je.description|truncatechars:50 }}</td>
-          <td class="text-end">{{ je.total_debit|floatformat:2 }}</td>
+          <td class="text-nowrap text-muted">{{ row.je.date }}</td>
           <td>
-            <a href="{% url 'projects:je_detail' project_pk=project.pk pk=je.pk %}"
-               class="btn btn-sm btn-outline-secondary py-0 px-1">
+            <span class="badge bg-secondary">{{ row.je.get_transaction_type_display }}</span>
+            <div class="text-muted" style="font-size:.65rem;">JE-{{ row.je.pk|stringformat:"04d" }}</div>
+          </td>
+          <td class="text-muted">{{ row.je.description|truncatechars:50 }}</td>
+          <td class="text-end">
+            {% for amt in row.amounts %}
+              {% if amt.charged %}
+              <div class="text-danger fw-semibold">
+                {{ amt.charged|floatformat:2 }}
+                <span class="badge bg-danger bg-opacity-10 text-danger ms-1" style="font-size:.7rem;">{{ amt.currency }}</span>
+              </div>
+              {% endif %}
+            {% endfor %}
+          </td>
+          <td class="text-end">
+            {% for amt in row.amounts %}
+              {% if amt.paid %}
+              <div class="text-success fw-semibold">
+                {{ amt.paid|floatformat:2 }}
+                <span class="badge bg-success bg-opacity-10 text-success ms-1" style="font-size:.7rem;">{{ amt.currency }}</span>
+              </div>
+              {% endif %}
+            {% endfor %}
+          </td>
+          <td>
+            <a href="{% url 'projects:je_detail' project_pk=project.pk pk=row.je.pk %}"
+               class="btn btn-sm btn-outline-secondary py-0 px-1" title="{% trans 'View details' %}">
               <i class="bi bi-eye"></i>
             </a>
           </td>

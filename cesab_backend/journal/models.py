@@ -64,6 +64,29 @@ class JournalEntry(models.Model):
     def total_credit(self):
         return sum(l.credit for l in self.lines.all())
 
+    def total_debit_tc(self):
+        return sum(l.debit_tc for l in self.lines.all())
+
+    def total_credit_tc(self):
+        return sum(l.credit_tc for l in self.lines.all())
+
+    def tc_currency_code(self):
+        """Return the single transaction currency code if all lines share the same one, else None."""
+        codes = {l.transaction_currency.code for l in self.lines.all()}
+        return codes.pop() if len(codes) == 1 else None
+
+    def tc_totals_by_currency(self):
+        """Return TC debit/credit totals grouped by currency — safe for multi-currency entries."""
+        from collections import defaultdict
+        from decimal import Decimal
+        totals = defaultdict(lambda: {"debit_tc": Decimal("0"), "credit_tc": Decimal("0")})
+        for line in self.lines.all():
+            code = line.transaction_currency.code
+            totals[code]["debit_tc"] += line.debit_tc
+            totals[code]["credit_tc"] += line.credit_tc
+        return [{"code": k, "debit_tc": v["debit_tc"], "credit_tc": v["credit_tc"]}
+                for k, v in sorted(totals.items())]
+
     def is_balanced(self):
         return self.total_debit() == self.total_credit()
 
