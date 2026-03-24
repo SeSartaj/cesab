@@ -1,31 +1,235 @@
 {% extends "base.html" %}
 {% load i18n %}
 {% block title %}{% trans "Login" %}{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Login page overrides ── */
+  body { background: #0f2444; }
+
+  .login-wrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;   /* keyboard-safe on mobile */
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+  @media (min-height: 600px) {
+    .login-wrap { align-items: center; }
+  }
+
+  .login-shell {
+    display: flex;
+    width: 100%;
+    max-width: 880px;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,.45);
+  }
+
+  /* ── Left branded panel ── */
+  .login-brand {
+    flex: 0 0 42%;
+    background: linear-gradient(160deg, #1a3f6f 0%, #0f2444 60%, #0a1a30 100%);
+    padding: 3rem 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+  .login-brand::before {           /* decorative circle */
+    content: '';
+    position: absolute;
+    width: 320px; height: 320px;
+    border-radius: 50%;
+    border: 40px solid rgba(200,160,74,.12);
+    top: -80px; right: -100px;
+  }
+  .login-brand::after {            /* second decorative circle */
+    content: '';
+    position: absolute;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    border: 30px solid rgba(200,160,74,.08);
+    bottom: -60px; left: -60px;
+  }
+  .login-brand .brand-icon {
+    font-size: 3rem;
+    color: var(--cesab-gold);
+    line-height: 1;
+  }
+  .login-brand h1 {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -.5px;
+    margin: .5rem 0 .25rem;
+  }
+  .login-brand .tagline {
+    color: rgba(255,255,255,.55);
+    font-size: .85rem;
+    line-height: 1.5;
+  }
+  .login-brand .features { list-style: none; padding: 0; margin: 0; }
+  .login-brand .features li {
+    color: rgba(255,255,255,.7);
+    font-size: .8rem;
+    padding: .35rem 0;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .login-brand .features li i { color: var(--cesab-gold); font-size: .9rem; flex-shrink: 0; }
+  .login-brand .copyright { color: rgba(255,255,255,.3); font-size: .7rem; }
+
+  /* ── Right form panel ── */
+  .login-form-panel {
+    flex: 1 1 0;
+    background: #fff;
+    padding: 3rem 2.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .login-form-panel .form-label {
+    font-weight: 600;
+    font-size: .82rem;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .login-form-panel .form-control {
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    padding: .65rem .9rem;
+    font-size: .95rem;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .login-form-panel .form-control:focus {
+    border-color: var(--cesab-blue);
+    box-shadow: 0 0 0 3px rgba(26,63,111,.12);
+  }
+  .login-form-panel .input-group .btn {
+    border: 1.5px solid #e5e7eb;
+    border-left: none;
+    border-radius: 0 8px 8px 0;
+    color: #9ca3af;
+    background: #fff;
+    transition: color .2s;
+  }
+  .login-form-panel .input-group .btn:hover { color: var(--cesab-blue); background: #fff; }
+  .login-form-panel .input-group .form-control { border-radius: 8px 0 0 8px; }
+  .btn-login {
+    background: linear-gradient(135deg, #1a3f6f, #245199);
+    border: none;
+    border-radius: 8px;
+    padding: .75rem;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+    transition: opacity .2s, transform .15s;
+  }
+  .btn-login:hover { opacity: .92; transform: translateY(-1px); }
+  .btn-login:active { transform: translateY(0); }
+
+  /* ── Collapse brand panel on small screens ── */
+  @media (max-width: 640px) {
+    .login-shell { flex-direction: column; border-radius: 14px; }
+    .login-brand {
+      flex: none;
+      padding: 1.75rem 1.5rem 1.5rem;
+    }
+    .login-brand .features,
+    .login-brand .copyright { display: none; }
+    .login-form-panel { padding: 2rem 1.5rem; }
+  }
+</style>
+{% endblock %}
+
 {% block body %}
-<div class="d-flex align-items-center justify-content-center" style="min-height:100vh;background:#f4f6f9">
-  <div class="card p-4" style="min-width:360px;max-width:420px;width:100%">
-    <div class="text-center mb-4">
-      <i class="bi bi-buildings display-4" style="color:var(--cesab-blue)"></i>
-      <h4 class="fw-bold mt-2" style="color:var(--cesab-blue)">CESAB Finance</h4>
-      <p class="text-muted small">{% trans "Construction Finance Management" %}</p>
+<div class="login-wrap">
+  <div class="login-shell">
+
+    <!-- ── Left: brand panel ── -->
+    <div class="login-brand">
+      <div>
+        <div class="brand-icon"><i class="bi bi-buildings-fill"></i></div>
+        <h1>CESAB<br>Finance</h1>
+        <p class="tagline">{% trans "Construction Finance Management" %}</p>
+      </div>
+      <ul class="features">
+        <li><i class="bi bi-check-circle-fill"></i> {% trans "Multi-project accounting" %}</li>
+        <li><i class="bi bi-check-circle-fill"></i> {% trans "Multi-currency cashboxes" %}</li>
+        <li><i class="bi bi-check-circle-fill"></i> {% trans "Shareholder & payables tracking" %}</li>
+        <li><i class="bi bi-check-circle-fill"></i> {% trans "Role-based access control" %}</li>
+      </ul>
+      <p class="copyright">© {% now "Y" %} CESAB. {% trans "All rights reserved." %}</p>
     </div>
-    {% if form.errors %}
-    <div class="alert alert-danger">{% trans "Invalid username or password." %}</div>
-    {% endif %}
-    <form method="post">
-      {% csrf_token %}
-      <div class="mb-3">
-        <label class="form-label">{% trans "Username" %}</label>
-        <input type="text" name="username" class="form-control" autofocus required>
+
+    <!-- ── Right: form panel ── -->
+    <div class="login-form-panel">
+      <h2 class="fw-bold mb-1" style="color:#111827;font-size:1.5rem">{% trans "Welcome back" %}</h2>
+      <p class="text-muted mb-4" style="font-size:.9rem">{% trans "Sign in to your account to continue." %}</p>
+
+      {% if form.errors %}
+      <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-4" role="alert">
+        <i class="bi bi-exclamation-circle-fill flex-shrink-0"></i>
+        <span>{% trans "Invalid username or password. Please try again." %}</span>
       </div>
-      <div class="mb-3">
-        <label class="form-label">{% trans "Password" %}</label>
-        <input type="password" name="password" class="form-control" required>
-      </div>
-      <button type="submit" class="btn btn-primary w-100">
-        <i class="bi bi-box-arrow-in-right"></i> {% trans "Login" %}
-      </button>
-    </form>
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label" for="id_username">{% trans "Username" %}</label>
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0" style="border:1.5px solid #e5e7eb;border-right:none;border-radius:8px 0 0 8px">
+              <i class="bi bi-person text-secondary"></i>
+            </span>
+            <input type="text" name="username" id="id_username"
+                   class="form-control border-start-0" style="border-radius:0 8px 8px 0"
+                   autocomplete="username" autofocus required>
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="form-label" for="passwordInput">{% trans "Password" %}</label>
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0" style="border:1.5px solid #e5e7eb;border-right:none;border-radius:8px 0 0 8px">
+              <i class="bi bi-lock text-secondary"></i>
+            </span>
+            <input type="password" name="password" id="passwordInput"
+                   class="form-control border-start-0 border-end-0" style="border-radius:0"
+                   autocomplete="current-password" required>
+            <button class="btn" type="button" id="togglePassword" tabindex="-1"
+                    title="{% trans 'Show/hide password' %}">
+              <i class="bi bi-eye" id="toggleIcon"></i>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-login w-100">
+          {% trans "Sign In" %} <i class="bi bi-arrow-right ms-1"></i>
+        </button>
+      </form>
+    </div>
+
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}{{ block.super }}
+<script>
+document.getElementById('togglePassword').addEventListener('click', function () {
+  var input = document.getElementById('passwordInput');
+  var icon  = document.getElementById('toggleIcon');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.className = 'bi bi-eye-slash';
+  } else {
+    input.type = 'password';
+    icon.className = 'bi bi-eye';
+  }
+  input.focus();
+});
+</script>
 {% endblock %}
