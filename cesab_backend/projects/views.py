@@ -108,6 +108,14 @@ class ProjectCreateView(LoginRequiredMixin, CreateView):
             description=data.get("description", ""),
             start_date=data.get("start_date"),
         )
+        # Save optional print branding supplied at creation time
+        for field in ("print_heading", "print_subheading"):
+            val = data.get(field)
+            if val:
+                setattr(project, field, val)
+        if data.get("print_logo"):
+            project.print_logo = data["print_logo"]
+        project.save(update_fields=["print_heading", "print_subheading", "print_logo"])
         messages.success(self.request, _("Project created successfully."))
         return redirect("projects:dashboard", pk=project.pk)
 

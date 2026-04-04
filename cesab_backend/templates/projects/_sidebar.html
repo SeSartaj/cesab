@@ -18,6 +18,11 @@
       </a>
     </li>
     <li class="nav-item">
+      <a class="nav-link {% if active == 'trial_balance' %}active{% endif %}" href="{% url 'projects:trial_balance' project_pk=project.pk %}">
+        <i class="bi bi-table"></i> {% trans "Trial Balance" %}
+      </a>
+    </li>
+    <li class="nav-item">
       <a class="nav-link {% if active == 'shareholders' %}active{% endif %}" href="{% url 'projects:shareholders' project_pk=project.pk %}">
         <i class="bi bi-people"></i> {% trans "Shareholders" %}
       </a>
@@ -28,8 +33,39 @@
       </a>
     </li>
     <li class="nav-item">
-      <a class="nav-link {% if active == 'vendors' %}active{% endif %}" href="{% url 'projects:vendors' project_pk=project.pk %}">
-        <i class="bi bi-truck"></i> {% trans "Vendors" %}
+      <a class="nav-link {% if active == 'contacts' or active == 'vendors' %}active{% endif %}" href="{% url 'projects:contacts' project_pk=project.pk %}">
+        <i class="bi bi-person-lines-fill"></i> {% trans "Contacts" %}
+      </a>
+    </li>
+    <li class="nav-item mt-1">
+      <p class="text-muted small px-2 mb-0 fw-semibold text-uppercase" style="font-size:.7rem">{% trans "Purchasing" %}</p>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if active == 'bills' %}active{% endif %}" href="{% url 'projects:bill_list' project_pk=project.pk %}">
+        <i class="bi bi-receipt"></i> {% trans "Vendor Bills" %}
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if active == 'payments' %}active{% endif %}" href="{% url 'projects:payment_list' project_pk=project.pk %}">
+        <i class="bi bi-arrow-up-circle"></i> {% trans "Payments" %}
+      </a>
+    </li>
+    <li class="nav-item mt-1">
+      <p class="text-muted small px-2 mb-0 fw-semibold text-uppercase" style="font-size:.7rem">{% trans "Sales" %}</p>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if active == 'invoices' %}active{% endif %}" href="{% url 'projects:invoice_list' project_pk=project.pk %}">
+        <i class="bi bi-file-earmark-text"></i> {% trans "Invoices" %}
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if active == 'receipts' %}active{% endif %}" href="{% url 'projects:receipt_list' project_pk=project.pk %}">
+        <i class="bi bi-arrow-down-circle"></i> {% trans "Receipts" %}
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if active == 'taxes' %}active{% endif %}" href="{% url 'projects:tax_list' project_pk=project.pk %}">
+        <i class="bi bi-percent"></i> {% trans "Taxes" %}
       </a>
     </li>
     <li class="nav-item">

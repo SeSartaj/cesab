@@ -1,0 +1,571 @@
+{% extends "base.html" %}
+{% load i18n crispy_forms_tags %}
+{% block title %}{% trans "Receipt" %}{% endblock %}
+{% block sidebar %}{% include "projects/_sidebar.html" with active="receipts" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5><i class="bi bi-arrow-down-circle"></i>
+    {% if form.instance.pk %}{% trans "Edit Receipt" %} — {{ form.instance.number }}
+    {% else %}{% trans "New Receipt" %}{% endif %}
+  </h5>
+  <a href="{% url 'projects:receipt_list' project_pk=project.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> {% trans "Back" %}
+  </a>
+</div>
+
+<div class="row g-3">
+  {# ── Left: form inputs ───────────────────────────────────────────────── #}
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body">
+        <form method="post" id="receiptForm">
+          {% csrf_token %}
+          <input type="hidden" name="currency" id="hidden_currency"
+                 value="{{ form.currency.value|default:base_currency_id }}">
+          <input type="hidden" name="exchange_rate" id="hidden_exchange_rate"
+                 value="{{ form.exchange_rate.value|default:'1' }}">
+
+          {# 1. Walk-in toggle #}
+          <div class="mb-3 p-2 bg-light rounded border">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="walk-in-toggle">
+              <label class="form-check-label fw-semibold" for="walk-in-toggle">
+                {% trans "Walk-in / one-time payment (no customer)" %}
+              </label>
+            </div>
+          </div>
+
+          {# 2. Customer / Income account #}
+          <div class="mb-3" id="contact-field">
+            <label class="form-label fw-semibold">{% trans "Customer" %}</label>
+            {{ form.contact }}
+            {% if form.contact.errors %}<div class="text-danger small mt-1">{{ form.contact.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="mb-3" id="income-account-field" style="display:none">
+            <label class="form-label fw-semibold">{% trans "Income Account (walk-in)" %}</label>
+            {{ form.income_account }}
+            {% if form.income_account.errors %}<div class="text-danger small mt-1">{{ form.income_account.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# 3. Date #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% trans "Date" %}</label>
+            {{ form.date }}
+            {% if form.date.errors %}<div class="text-danger small mt-1">{{ form.date.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# 4. Invoice link #}
+          <div class="mb-3" id="invoice-field">
+            <label class="form-label fw-semibold">
+              {% trans "Invoice" %}
+              <span class="text-muted fw-normal small ms-1">({% trans "optional" %})</span>
+            </label>
+            {{ form.invoice }}
+            {% if form.invoice.errors %}<div class="text-danger small mt-1">{{ form.invoice.errors.0 }}</div>{% endif %}
+            <div class="form-text">{% trans "Link to a specific invoice to track FX gain/loss accurately." %}</div>
+          </div>
+
+          {# 5. Receipt mode — for foreign invoices #}
+          <div id="receipt-mode-section" class="mb-3 p-3 bg-light rounded border" style="display:none">
+            <div class="fw-semibold mb-1">{% trans "How would you like to record this receipt?" %}</div>
+            <div class="form-text text-muted mb-2" id="receipt-mode-hint"></div>
+            <div class="d-flex gap-4 flex-wrap">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="_rec_mode" id="mode_same" value="same" checked>
+                <label class="form-check-label fw-semibold" for="mode_same" id="mode_same_label">—</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="_rec_mode" id="mode_base" value="base">
+                <label class="form-check-label fw-semibold" for="mode_base" id="mode_base_label">—</label>
+              </div>
+            </div>
+          </div>
+
+          {# 6. Cashbox #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% trans "Received Into (Cashbox)" %}</label>
+            {{ form.cashbox }}
+            {% if form.cashbox.errors %}<div class="text-danger small mt-1">{{ form.cashbox.errors.0 }}</div>{% endif %}
+            <div class="form-text" id="cashbox-hint"></div>
+          </div>
+
+          {# 7. Amount #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              {% trans "Amount" %}
+              <span class="badge bg-secondary ms-1" id="amount-badge">{{ base_currency_code }}</span>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text text-muted" id="amount-sym">{{ base_currency_symbol|default:base_currency_code }}</span>
+              {{ form.amount }}
+            </div>
+            {% if form.amount.errors %}<div class="text-danger small mt-1">{{ form.amount.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# 8. Exchange rate #}
+          <div id="rate-section" class="mb-3 p-3 border rounded" style="display:none">
+            <label class="form-label fw-semibold mb-0" id="rate-label">{% trans "Exchange Rate" %}</label>
+            <div class="form-text text-muted mb-2" id="rate-description"></div>
+            <div class="input-group">
+              <input type="number" id="rate-input" class="form-control"
+                     step="0.000001" min="0.000001"
+                     placeholder="e.g. 77.000000"
+                     value="{{ form.exchange_rate.value|default:'' }}">
+              <span class="input-group-text fw-semibold" id="rate-unit">—</span>
+            </div>
+            {% if form.exchange_rate.errors %}<div class="text-danger small mt-1">{{ form.exchange_rate.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# 9. Notes #}
+          <div class="mb-3">{{ form.notes|as_crispy_field }}</div>
+
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-success px-4">
+              <i class="bi bi-save"></i> {% trans "Save Receipt" %}
+            </button>
+            <a href="{% url 'projects:receipt_list' project_pk=project.pk %}" class="btn btn-outline-secondary">
+              {% trans "Cancel" %}
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {# ── Right: live preview ─────────────────────────────────────────────── #}
+  <div class="col-lg-5">
+
+    <div id="invoice-card" class="card mb-3 border-success" style="display:none">
+      <div class="card-header bg-success text-white py-2 d-flex align-items-center gap-2">
+        <i class="bi bi-file-earmark-check"></i>
+        <span id="inv-card-title" class="fw-semibold"></span>
+      </div>
+      <div class="card-body py-2">
+        <div class="row g-2 text-center mb-2">
+          <div class="col-4">
+            <div class="text-muted" style="font-size:.75rem">{% trans "Total" %}</div>
+            <div class="fw-semibold small" id="inv-total">—</div>
+          </div>
+          <div class="col-4">
+            <div class="text-muted" style="font-size:.75rem">{% trans "Received" %}</div>
+            <div class="fw-semibold small text-success" id="inv-received">—</div>
+          </div>
+          <div class="col-4">
+            <div class="text-muted" style="font-size:.75rem">{% trans "Outstanding" %}</div>
+            <div class="fw-semibold small text-warning" id="inv-balance">—</div>
+          </div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center small">
+          <span class="text-muted">{% trans "Booked at" %}</span>
+          <span id="inv-booking-rate" class="badge bg-light text-dark border"></span>
+        </div>
+      </div>
+    </div>
+
+    <div id="fx-preview-card" class="card" style="display:none">
+      <div class="card-header py-2 fw-semibold d-flex align-items-center gap-2"
+           style="background:#d1ecf1;color:#0c5460">
+        <i class="bi bi-calculator"></i> {% trans "Receipt Preview" %}
+      </div>
+      <div class="card-body py-2 small">
+
+        <div id="preview-same">
+          <div class="d-flex justify-content-between py-1 border-bottom">
+            <span class="text-muted">{% trans "You are receiving" %}</span>
+            <span id="prev-amount-tc" class="fw-semibold">—</span>
+          </div>
+          <div class="d-flex justify-content-between py-1 border-bottom">
+            <span class="text-muted">{% trans "Receivable reduces by" %} <span class="fw-normal">({% trans "booking rate" %})</span></span>
+            <span id="prev-receivable-bc" class="fw-semibold">—</span>
+          </div>
+          <div class="d-flex justify-content-between py-1 border-bottom">
+            <span class="text-muted">{% trans "Cash entering cashbox" %}</span>
+            <span id="prev-cashbox-bc" class="fw-semibold">—</span>
+          </div>
+          <div class="d-flex justify-content-between py-1 border-bottom">
+            <span class="text-muted" id="fx-label">{% trans "FX Gain / Loss" %}</span>
+            <span id="prev-fx" class="fw-semibold">—</span>
+          </div>
+          <div class="d-flex justify-content-between py-1">
+            <span class="text-muted">{% trans "Remaining balance" %}</span>
+            <span id="prev-remaining-same" class="fw-semibold">—</span>
+          </div>
+        </div>
+
+        <div id="preview-base" style="display:none">
+          <div class="d-flex justify-content-between py-1 border-bottom">
+            <span class="text-muted">{% trans "You are receiving" %} ({% trans "base" %})</span>
+            <span id="prev-base-amount" class="fw-semibold">—</span>
+          </div>
+          <div class="d-flex justify-content-between py-1 border-bottom">
+            <span class="text-muted">{% trans "≈ Equivalent in invoice currency" %} <span class="fw-normal">({% trans "at booking rate" %})</span></span>
+            <span id="prev-base-equiv-tc" class="fw-semibold text-success">—</span>
+          </div>
+          <div class="d-flex justify-content-between py-1">
+            <span class="text-muted">{% trans "Remaining balance" %}</span>
+            <span id="prev-remaining-base" class="fw-semibold">—</span>
+          </div>
+        </div>
+
+        <div id="preview-simple" style="display:none">
+          <div class="d-flex justify-content-between py-1">
+            <span class="text-muted">{% trans "Amount reducing receivable" %}</span>
+            <span id="prev-simple-bc" class="fw-semibold">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="no-inv-tip" class="alert alert-light border small mt-2">
+      <i class="bi bi-lightbulb text-warning"></i>
+      {% trans "Select an invoice above to see a live preview with automatic FX gain/loss tracking." %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var invoicesData = {{ invoices_json|safe }};
+  var cbData       = {{ cashboxes_json|safe }};
+  var baseCurrId   = {{ base_currency_id }};
+  var baseCurrCode = "{{ base_currency_code }}";
+  var baseCurrSym  = "{{ base_currency_symbol }}";
+
+  var contactSel   = document.getElementById("id_contact");
+  var invoiceSel   = document.getElementById("id_invoice");
+  var cashboxSel   = document.getElementById("id_cashbox");
+  var amountInput  = document.getElementById("id_amount");
+  var rateInput    = document.getElementById("rate-input");
+  var hiddenCurr   = document.getElementById("hidden_currency");
+  var hiddenRate   = document.getElementById("hidden_exchange_rate");
+  var walkInToggle = document.getElementById("walk-in-toggle");
+  var contactField = document.getElementById("contact-field");
+  var incomeField  = document.getElementById("income-account-field");
+  var invField     = document.getElementById("invoice-field");
+  var contactSel2  = document.getElementById("id_contact");
+  var incomeSel    = document.getElementById("id_income_account");
+
+  var modeSameRad  = document.getElementById("mode_same");
+  var modeBaseRad  = document.getElementById("mode_base");
+  var modeSameLbl  = document.getElementById("mode_same_label");
+  var modeBaseLbl  = document.getElementById("mode_base_label");
+  var modeSection  = document.getElementById("receipt-mode-section");
+  var modeHint     = document.getElementById("receipt-mode-hint");
+
+  var rateSection  = document.getElementById("rate-section");
+  var rateLabel    = document.getElementById("rate-label");
+  var rateDesc     = document.getElementById("rate-description");
+  var rateUnit     = document.getElementById("rate-unit");
+  var amtBadge     = document.getElementById("amount-badge");
+  var amtSym       = document.getElementById("amount-sym");
+  var cbHint       = document.getElementById("cashbox-hint");
+
+  var _lastRateSeed = null; // "invPk:mode" — seed rate only when invoice/mode changes
+
+  var invCard       = document.getElementById("invoice-card");
+  var invCardTitle  = document.getElementById("inv-card-title");
+  var invTotal      = document.getElementById("inv-total");
+  var invReceived   = document.getElementById("inv-received");
+  var invBalance    = document.getElementById("inv-balance");
+  var invBookRate   = document.getElementById("inv-booking-rate");
+
+  var fxCard        = document.getElementById("fx-preview-card");
+  var prevSame      = document.getElementById("preview-same");
+  var prevBase      = document.getElementById("preview-base");
+  var prevSimple    = document.getElementById("preview-simple");
+  var noTip         = document.getElementById("no-inv-tip");
+
+  var prevAmountTc    = document.getElementById("prev-amount-tc");
+  var prevReceivBc    = document.getElementById("prev-receivable-bc");
+  var prevCashboxBc   = document.getElementById("prev-cashbox-bc");
+  var fxLabel         = document.getElementById("fx-label");
+  var prevFx          = document.getElementById("prev-fx");
+  var prevRemSame     = document.getElementById("prev-remaining-same");
+  var prevBaseAmt     = document.getElementById("prev-base-amount");
+  var prevBaseEquivTc = document.getElementById("prev-base-equiv-tc");
+  var prevRemBase     = document.getElementById("prev-remaining-base");
+  var prevSimpleBc    = document.getElementById("prev-simple-bc");
+
+  function fmt(n, sym) {
+    var s = n.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+    return sym ? sym + "\u00a0" + s : s;
+  }
+
+  function selectedInv() {
+    var pk = invoiceSel && invoiceSel.value;
+    return pk ? (invoicesData[pk] || null) : null;
+  }
+
+  function recMode() {
+    return modeSameRad && modeSameRad.checked ? "same" : "base";
+  }
+
+  function getRate() { return parseFloat(rateInput && rateInput.value) || 0; }
+  function getAmount() { return parseFloat(amountInput && amountInput.value) || 0; }
+
+  /* Walk-in toggle */
+  function applyWalkIn() {
+    var walkIn = walkInToggle && walkInToggle.checked;
+    if (contactField) contactField.style.display = walkIn ? "none" : "";
+    if (incomeField)  incomeField.style.display  = walkIn ? "" : "none";
+    if (invField)     invField.style.display     = walkIn ? "none" : "";
+    if (walkIn && contactSel2) contactSel2.value = "";
+    if (!walkIn && incomeSel)  incomeSel.value   = "";
+    // If walk-in, reset invoice and clear invoice card
+    if (walkIn && invoiceSel) invoiceSel.value = "";
+    update();
+  }
+
+  /* Filter invoices by contact */
+  var allInvOpts = invoiceSel
+    ? Array.from(invoiceSel.options).map(function(o) {
+        var inv = invoicesData[o.value];
+        return {value: o.value, text: o.text, contact_id: inv ? inv.contact_id : null};
+      })
+    : [];
+
+  function filterInvoices() {
+    if (!invoiceSel) return;
+    var cid = contactSel ? parseInt(contactSel.value) || null : null;
+    var cur = invoiceSel.value;
+    invoiceSel.innerHTML = "";
+    allInvOpts.forEach(function(o) {
+      if (!o.value) { invoiceSel.appendChild(new Option(o.text, "")); return; }
+      if (cid && o.contact_id && o.contact_id !== cid) return;
+      invoiceSel.appendChild(new Option(o.text, o.value));
+    });
+    invoiceSel.value = cur;
+    if (invoiceSel.value !== cur) invoiceSel.value = "";
+  }
+
+  /* Filter cashboxes */
+  var allCbOpts = cashboxSel
+    ? Array.from(cashboxSel.options).map(function(o) {
+        var c = cbData[o.value];
+        return {value: o.value, text: o.text, currency_id: c ? c.currency_id : null};
+      })
+    : [];
+
+  function filterCashboxes(targetCurrId) {
+    if (!cashboxSel) return;
+    var cur = cashboxSel.value;
+    cashboxSel.innerHTML = "";
+    allCbOpts.forEach(function(o) {
+      if (!o.value) { cashboxSel.appendChild(new Option(o.text, "")); return; }
+      if (targetCurrId && o.currency_id && o.currency_id !== targetCurrId) return;
+      cashboxSel.appendChild(new Option(o.text, o.value));
+    });
+    cashboxSel.value = cur;
+    if (cashboxSel.value !== cur) cashboxSel.value = "";
+  }
+
+  if (walkInToggle) {
+    // Detect edit mode with income_account set
+    if (incomeSel && incomeSel.value) walkInToggle.checked = true;
+    applyWalkIn();
+    walkInToggle.addEventListener("change", applyWalkIn);
+  }
+
+  function update() {
+    var inv       = selectedInv();
+    var isForeign = inv && (inv.currency_id !== baseCurrId);
+    var mode      = isForeign ? recMode() : "base";
+    var amt       = getAmount();
+    var rate      = getRate();
+
+    if (!inv) {
+      invCard.style.display    = "none";
+      modeSection.style.display = "none";
+      rateSection.style.display = "none";
+      fxCard.style.display     = "none";
+      noTip.style.display      = "";
+      cbHint.textContent       = "";
+      filterCashboxes(null);
+      amtBadge.textContent = baseCurrCode;
+      amtSym.textContent   = baseCurrSym || baseCurrCode;
+      hiddenCurr.value = String(baseCurrId);
+      hiddenRate.value = "1";
+      if (amt > 0) {
+        prevSimpleBc.textContent = fmt(amt, baseCurrSym) + " " + baseCurrCode;
+        prevSame.style.display   = "none";
+        prevBase.style.display   = "none";
+        prevSimple.style.display = "";
+        fxCard.style.display     = "";
+        noTip.style.display      = "none";
+      }
+      return;
+    }
+
+    noTip.style.display      = "none";
+    invCard.style.display    = "";
+    invCardTitle.textContent = inv.number;
+    invTotal.textContent     = fmt(inv.total_tc, inv.currency_symbol) + " " + inv.currency_code;
+    invReceived.textContent  = fmt(inv.received_tc, inv.currency_symbol) + " " + inv.currency_code;
+    invBalance.textContent   = fmt(inv.balance_tc, inv.currency_symbol) + " " + inv.currency_code;
+    invBookRate.textContent  = isForeign
+      ? "1\u00a0" + inv.currency_code + "\u00a0=\u00a0" + inv.booking_rate.toFixed(4) + "\u00a0" + baseCurrCode
+      : baseCurrCode + " (base)";
+
+    if (isForeign) {
+      modeSection.style.display = "";
+      modeSameLbl.textContent   = "{% trans 'Receive in' %} " + inv.currency_code + " ({% trans 'same as invoice' %})";
+      modeBaseLbl.textContent   = "{% trans 'Receive in' %} " + baseCurrCode + " ({% trans 'base currency' %})";
+      modeHint.textContent      = "{% trans 'Same-currency receipt records any FX movement as Gain/Loss.' %}";
+    } else {
+      modeSection.style.display = "none";
+    }
+
+    if (mode === "same") {
+      filterCashboxes(inv.currency_id);
+      amtBadge.textContent = inv.currency_code;
+      amtSym.textContent   = inv.currency_symbol || inv.currency_code;
+      cbHint.innerHTML     = "<i class='bi bi-filter'></i> {% trans 'Showing' %} <strong>" +
+                             inv.currency_code + "</strong> {% trans 'cashboxes only.' %}";
+      hiddenCurr.value = String(inv.currency_id);
+    } else {
+      filterCashboxes(baseCurrId);
+      amtBadge.textContent = baseCurrCode;
+      amtSym.textContent   = baseCurrSym || baseCurrCode;
+      cbHint.innerHTML     = "<i class='bi bi-filter'></i> {% trans 'Showing base-currency' %} (" +
+                             baseCurrCode + ") {% trans 'cashboxes only.' %}";
+      hiddenCurr.value = String(baseCurrId);
+    }
+
+    if (isForeign) {
+      rateSection.style.display = "";
+      rateUnit.textContent = baseCurrCode + "/" + inv.currency_code;
+      var rateSeedKey = (invoiceSel ? invoiceSel.value : "") + ":" + mode;
+      var shouldSeed  = (rateSeedKey !== _lastRateSeed);
+      if (shouldSeed) { _lastRateSeed = rateSeedKey; }
+      if (mode === "same") {
+        rateLabel.textContent = "{% trans "Today's Exchange Rate" %} — {% trans 'required' %}";
+        rateDesc.innerHTML =
+          "<strong>{% trans 'Current rate' %}:</strong> 1\u00a0" + inv.currency_code +
+          "\u00a0=\u00a0?\u00a0" + baseCurrCode +
+          ". <span class='text-muted'>{% trans 'Invoice was booked at' %} " +
+          inv.booking_rate.toFixed(4) + " — {% trans 'any difference becomes FX Gain/Loss.' %}</span>";
+        if (shouldSeed && (!rateInput.value || parseFloat(rateInput.value) <= 0)) {
+          rateInput.value = inv.booking_rate;
+        }
+      } else {
+        rateLabel.textContent = "{% trans "Today's Exchange Rate" %} — {% trans 'required' %}";
+        rateDesc.innerHTML =
+          "<strong>1\u00a0" + inv.currency_code + "\u00a0=\u00a0?\u00a0" + baseCurrCode + "</strong>" +
+          " <span class='text-muted'>{% trans 'Determines how many' %} " + inv.currency_code +
+          " {% trans 'are cleared from this invoice.' %}</span>";
+        if (shouldSeed && (!rateInput.value || parseFloat(rateInput.value) <= 0)) {
+          rateInput.value = inv.booking_rate;
+        }
+      }
+      hiddenRate.value = rateInput.value || String(inv.booking_rate);
+    } else {
+      rateSection.style.display = "none";
+      hiddenRate.value = "1";
+      _lastRateSeed = null; // reset so next foreign invoice seeds fresh
+    }
+
+    fxCard.style.display = "";
+
+    if (mode === "same" && isForeign) {
+      prevSame.style.display   = "";
+      prevBase.style.display   = "none";
+      prevSimple.style.display = "none";
+
+      if (rate > 0 && amt > 0) {
+        var receivableBC = amt * inv.booking_rate;
+        var cashBC       = amt * rate;
+        var fxDiff       = cashBC - receivableBC;  // +ve = gain (received more than booked), -ve = loss
+
+        prevAmountTc.textContent  = fmt(amt, inv.currency_symbol) + "\u00a0" + inv.currency_code;
+        prevReceivBc.textContent  = fmt(receivableBC, baseCurrSym) + "\u00a0" + baseCurrCode +
+                                    " (@\u00a0" + inv.booking_rate.toFixed(4) + ")";
+        prevCashboxBc.textContent = fmt(cashBC, baseCurrSym) + "\u00a0" + baseCurrCode +
+                                    " (@\u00a0" + rate.toFixed(4) + ")";
+
+        if (Math.abs(fxDiff) < 0.005) {
+          fxLabel.textContent = "{% trans 'FX Gain/Loss' %}";
+          prevFx.textContent  = "{% trans 'No FX difference (same rate)' %}";
+          prevFx.className    = "fw-semibold text-muted";
+        } else if (fxDiff > 0) {
+          fxLabel.textContent = "{% trans 'FX Gain' %} \u2197";
+          prevFx.textContent  = "\u2191 " + fmt(fxDiff, baseCurrSym) + "\u00a0" + baseCurrCode;
+          prevFx.className    = "fw-semibold text-success";
+        } else {
+          fxLabel.textContent = "{% trans 'FX Loss' %} \u2198";
+          prevFx.textContent  = "\u2193 " + fmt(-fxDiff, baseCurrSym) + "\u00a0" + baseCurrCode;
+          prevFx.className    = "fw-semibold text-danger";
+        }
+
+        var rem = inv.balance_tc - amt;
+        prevRemSame.textContent = fmt(Math.max(rem, 0), inv.currency_symbol) + "\u00a0" + inv.currency_code;
+        prevRemSame.className   = "fw-semibold " + (rem > 0.005 ? "text-warning" : "text-success");
+
+      } else {
+        [prevAmountTc, prevReceivBc, prevCashboxBc, prevFx].forEach(function(el) { el.textContent = "—"; });
+        prevFx.className        = "fw-semibold";
+        fxLabel.textContent     = "{% trans 'FX Gain/Loss' %}";
+        prevRemSame.textContent = fmt(inv.balance_tc, inv.currency_symbol) + "\u00a0" + inv.currency_code;
+        prevRemSame.className   = "fw-semibold text-warning";
+      }
+
+    } else if (isForeign) {
+      prevSame.style.display   = "none";
+      prevBase.style.display   = "";
+      prevSimple.style.display = "none";
+
+      if (amt > 0 && rate > 0) {
+        var equivTc  = amt / rate;                      // invoice currency cleared at today's rate
+        var rem      = inv.balance_tc - equivTc;
+        prevBaseAmt.textContent     = fmt(amt, baseCurrSym) + "\u00a0" + baseCurrCode;
+        prevBaseEquivTc.textContent =
+          "\u2248\u00a0" + fmt(equivTc, inv.currency_symbol) + "\u00a0" + inv.currency_code +
+          " (@\u00a0" + rate.toFixed(4) + ")";
+        prevRemBase.textContent     = fmt(Math.max(rem, 0), inv.currency_symbol) + "\u00a0" + inv.currency_code;
+        prevRemBase.className       = "fw-semibold " + (rem > 0.005 ? "text-warning" : "text-success");
+      } else {
+        prevBaseAmt.textContent     = "—";
+        prevBaseEquivTc.textContent = amt > 0 ? "{% trans 'Enter exchange rate above' %}" : "—";
+        prevRemBase.textContent     = fmt(inv.balance_tc, inv.currency_symbol) + "\u00a0" + inv.currency_code;
+        prevRemBase.className       = "fw-semibold text-warning";
+      }
+
+    } else {
+      prevSame.style.display   = "none";
+      prevBase.style.display   = "none";
+      prevSimple.style.display = "";
+      prevSimpleBc.textContent = amt > 0 ? fmt(amt, baseCurrSym) + "\u00a0" + baseCurrCode : "—";
+    }
+  }
+
+  function syncRate() {
+    if (rateSection.style.display !== "none" && rateInput.value) {
+      hiddenRate.value = rateInput.value;
+    }
+    update();
+  }
+
+  if (contactSel)  contactSel.addEventListener("change", function() { filterInvoices(); update(); });
+  if (invoiceSel)  invoiceSel.addEventListener("change", update);
+  if (cashboxSel)  cashboxSel.addEventListener("change", update);
+  if (amountInput) amountInput.addEventListener("input", update);
+  if (rateInput)   rateInput.addEventListener("input", syncRate);
+  if (modeSameRad) modeSameRad.addEventListener("change", update);
+  if (modeBaseRad) modeBaseRad.addEventListener("change", update);
+
+  var recForm = document.getElementById("receiptForm");
+  if (recForm) {
+    recForm.addEventListener("submit", function() {
+      if (rateSection.style.display !== "none") {
+        hiddenRate.value = rateInput.value || "1";
+      }
+    });
+  }
+
+  filterInvoices();
+  update();
+})();
+</script>
+{% endblock %}

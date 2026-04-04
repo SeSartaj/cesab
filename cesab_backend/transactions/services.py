@@ -29,6 +29,19 @@ def _check_cashbox_balance(cashbox, amount_bc):
         )
 
 
+def _assert_balanced(je):
+    """Raise AssertionError if the JE does not balance. Called as a final safety check."""
+    from django.db.models import Sum
+    totals = je.lines.aggregate(d=Sum("debit"), c=Sum("credit"))
+    d = totals["d"] or Decimal("0")
+    c = totals["c"] or Decimal("0")
+    if d != c:
+        raise AssertionError(
+            f"{je} is unbalanced — debit {d:,.2f} ≠ credit {c:,.2f}. "
+            "This is a programming error; the transaction has been rolled back."
+        )
+
+
 def _add_line(je, account, debit=0, credit=0, currency=None, exchange_rate=1,
               debit_bc=None, credit_bc=None):
     """Create a JournalLine.
@@ -67,6 +80,7 @@ def capital_contribution(project, user, date, project_partner, amount,
                     "capital_contribution")
     _add_line(je, cashbox.account, debit=amount, currency=currency, exchange_rate=exchange_rate)
     _add_line(je, project_partner.capital_account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    _assert_balanced(je)
     return je
 
 
@@ -83,6 +97,7 @@ def shareholder_withdrawal(project, user, date, project_partner, amount,
                     "shareholder_withdrawal")
     _add_line(je, project_partner.current_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
     _add_line(je, cashbox.account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    _assert_balanced(je)
     return je
 
 
@@ -98,6 +113,7 @@ def vendor_bill(project, user, date, vendor, expense_account, amount,
                     "vendor_bill")
     _add_line(je, expense_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
     _add_line(je, vendor.payable_account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    _assert_balanced(je)
     return je
 
 
@@ -115,6 +131,7 @@ def vendor_advance_payment(project, user, date, vendor, amount, cashbox,
                     "vendor_advance")
     _add_line(je, vendor.advance_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
     _add_line(je, cashbox.account, credit=cashbox_bc, currency=project.base_currency, exchange_rate=1)
+    _assert_balanced(je)
     return je
 
 
@@ -126,10 +143,12 @@ def vendor_payment_against_bill(project, user, date, vendor, amount, cashbox,
     Two cashbox scenarios for a foreign-currency (e.g. USD) payable:
 
     A) Same-currency cashbox (USD cashbox paying a USD bill):
-       No conversion happens at payment time.  The caller need not supply an
-       exchange rate — the original booking rate is used automatically.
+       The caller supplies today's exchange rate so FX gain/loss is recorded
+       when the current rate differs from the booking rate.
        Dr. Vendor Payable   (amount_tc × bill_rate  → BC)
-       Cr. USD Cashbox      (amount_tc × bill_rate  → BC, TC in USD)
+       Dr. FX Loss          (only when paying at a worse rate than booked)
+       Cr. FX Gain          (only when paying at a better rate than booked)
+       Cr. USD Cashbox      (amount_tc × payment_rate → BC, TC in USD)
 
     B) Base-currency cashbox (AFN cashbox paying a USD bill):
        The user supplies today's exchange rate.  Any difference vs the booking
@@ -173,9 +192,9 @@ def vendor_payment_against_bill(project, user, date, vendor, amount, cashbox,
             bill_rate = (outstanding_bc / outstanding_tc).quantize(Decimal("0.000001"))
 
             # Scenario A: same-currency cashbox (e.g. USD cashbox paying a USD bill).
-            # Auto-use the booking rate — caller need not supply an exchange rate.
-            if cashbox.currency == currency:
-                payment_rate = bill_rate
+            # Use the caller-supplied exchange_rate so FX gain/loss is recorded
+            # when today's rate differs from the booking rate.
+            # (payment_rate is already set from the caller's exchange_rate arg above)
 
             payable_debit_bc = (amount_tc * bill_rate).quantize(Decimal("0.01"))
             cashbox_bc       = (amount_tc * payment_rate).quantize(Decimal("0.01"))
@@ -239,6 +258,7 @@ def vendor_payment_against_bill(project, user, date, vendor, amount, cashbox,
         _add_line(je, cashbox.account, credit=cashbox_bc,
                   currency=project.base_currency, exchange_rate=1)
 
+    _assert_balanced(je)
     return je
 
 
@@ -255,6 +275,7 @@ def cash_expense(project, user, date, expense_account, amount, cashbox,
                     "cash_expense")
     _add_line(je, expense_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
     _add_line(je, cashbox.account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    _assert_balanced(je)
     return je
 
 
@@ -339,6 +360,7 @@ def cashbox_transfer(project, user, date, from_cashbox, to_cashbox,
             # Credit side is larger → debit FX Loss to balance
             _add_line(je, loss_acc, debit=-fx_diff, currency=base, exchange_rate=1)
 
+    _assert_balanced(je)
     return je
 
 
@@ -405,6 +427,7 @@ def bank_deposit(project, user, date, from_cashbox, to_cashbox,
         else:
             _add_line(je, loss_acc, debit=-fx_diff, currency=base, exchange_rate=1)
 
+    _assert_balanced(je)
     return je
 
 
@@ -422,6 +445,7 @@ def project_income(project, user, date, cashbox, amount, income_account=None,
                     "project_income")
     _add_line(je, cashbox.account, debit=amount, currency=currency, exchange_rate=exchange_rate)
     _add_line(je, income_account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    _assert_balanced(je)
     return je
 
 
@@ -438,6 +462,7 @@ def asset_purchase(project, user, date, asset_account, amount, cashbox,
                     "asset_purchase")
     _add_line(je, asset_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
     _add_line(je, cashbox.account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    _assert_balanced(je)
     return je
 
 
@@ -456,6 +481,7 @@ def pay_salary(project, user, date, employee, days_or_months, cashbox,
                     "pay_salary")
     _add_line(je, employee.expense_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
     _add_line(je, cashbox.account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    _assert_balanced(je)
     return je
 
 
@@ -498,6 +524,7 @@ def manual_journal_entry(project, user, date, description, lines):
             credit_tc=Decimal(str(line.get("credit_tc", line.get("credit", 0)))),
             description=line.get("description", ""),
         )
+    _assert_balanced(je)
     return je
 
 
@@ -514,6 +541,7 @@ def vendor_advance_settlement(project, user, date, vendor, amount,
                     "vendor_advance_settlement")
     _add_line(je, vendor.payable_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
     _add_line(je, vendor.advance_account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    _assert_balanced(je)
     return je
 
 
@@ -532,6 +560,7 @@ def vendor_direct_payment(project, user, date, vendor, expense_account, amount, 
                     "vendor_direct_payment")
     _add_line(je, expense_account, debit=amount, currency=currency, exchange_rate=exchange_rate)
     _add_line(je, cashbox.account, credit=cashbox_bc, currency=project.base_currency, exchange_rate=1)
+    _assert_balanced(je)
     return je
 
 
@@ -549,6 +578,7 @@ def vendor_refund(project, user, date, vendor, amount, cashbox,
                     "vendor_refund")
     _add_line(je, cashbox.account, debit=cashbox_bc, currency=project.base_currency, exchange_rate=1)
     _add_line(je, vendor.payable_account, credit=amount, currency=currency, exchange_rate=exchange_rate)
+    _assert_balanced(je)
     return je
 
 
@@ -585,4 +615,5 @@ def create_correction_entry(original_je, user, description=""):
             credit_tc=line.debit_tc,
             description=f"Correction: {line.description}",
         )
+    _assert_balanced(je)
     return je

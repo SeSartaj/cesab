@@ -73,9 +73,65 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self._seed_currencies()
         self._seed_groups()
+        self._seed_project_tax_accounts()
         if not options["no_superuser"]:
             self._seed_superuser()
         self.stdout.write(self.style.SUCCESS("\n✔  initdata complete."))
+
+    # ------------------------------------------------------------------
+    def _seed_project_tax_accounts(self):
+        """Back-fill tax accounts and taxes for every existing project.
+
+        Safe to run multiple times — uses get_or_create / update throughout.
+        """
+        from projects.models import Project
+        from coa.models import Account
+        from coa.services import create_standard_taxes
+
+        self.stdout.write("\n── Project Tax Accounts ──")
+        projects = Project.objects.filter(is_active=True)
+        if not projects.exists():
+            self.stdout.write("  (no projects found — skipping)")
+            return
+
+        for project in projects:
+            self.stdout.write(f"  Project: {project.name}")
+
+            # 1. Ensure 2400 Tax Payable exists and is flagged
+            liab_parent = Account.objects.filter(project=project, code="2000").first()
+            tax_payable, created = Account.objects.get_or_create(
+                project=project, code="2400",
+                defaults={
+                    "name": "Tax Payable",
+                    "account_type": "liability",
+                    "parent": liab_parent,
+                    "is_system": True,
+                    "is_tax_account": True,
+                },
+            )
+            if not tax_payable.is_tax_account:
+                Account.objects.filter(pk=tax_payable.pk).update(is_tax_account=True)
+            self.stdout.write(f"    [{'created' if created else 'exists '}] 2400 Tax Payable")
+
+            # 2. Ensure 1700 Tax Receivable exists and is flagged
+            asset_parent = Account.objects.filter(project=project, code="1000").first()
+            tax_receivable, created = Account.objects.get_or_create(
+                project=project, code="1700",
+                defaults={
+                    "name": "Tax Receivable",
+                    "account_type": "asset",
+                    "parent": asset_parent,
+                    "is_system": True,
+                    "is_tax_account": True,
+                },
+            )
+            if not tax_receivable.is_tax_account:
+                Account.objects.filter(pk=tax_receivable.pk).update(is_tax_account=True)
+            self.stdout.write(f"    [{'created' if created else 'exists '}] 1700 Tax Receivable")
+
+            # 3. Ensure standard taxes exist
+            create_standard_taxes(project)
+            self.stdout.write(f"    [ok    ] Standard taxes")
 
     # ------------------------------------------------------------------
     def _seed_currencies(self):

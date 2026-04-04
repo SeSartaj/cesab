@@ -25,6 +25,8 @@ class Account(models.Model):
     account_type = models.CharField(max_length=20, choices=ACCOUNT_TYPES, verbose_name=_("Type"))
     is_system = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True, verbose_name=_("Active"))
+    is_tax_account = models.BooleanField(default=False, verbose_name=_("Tax Account"),
+        help_text=_("Mark this account as a tax collection/payment account"))
 
     class Meta:
         unique_together = ("project", "code")

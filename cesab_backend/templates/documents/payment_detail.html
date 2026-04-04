@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% load i18n humanize %}
+{% block title %}{{ payment.number }}{% endblock %}
+{% block sidebar %}{% include "projects/_sidebar.html" with active="payments" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+
+{% block extra_head %}
+<style>
+@media print {
+  nav.navbar, .col-md-2, .no-print { display: none !important; }
+  main { padding: 0 !important; margin: 0 !important; }
+  body { background: #fff !important; }
+  #screen-content { display: none !important; }
+  #print-area { display: block !important; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="screen-content">
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5><i class="bi bi-arrow-up-circle"></i> {{ payment.number }}</h5>
+  <div>
+    {% if payment.is_draft %}
+      {% if can_edit_financial %}
+      <a href="{% url 'projects:payment_edit' project_pk=project.pk pk=payment.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-pencil"></i> {% trans "Edit" %}
+      </a>
+      <form method="post" action="{% url 'projects:payment_post' project_pk=project.pk pk=payment.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success btn-sm"
+                onclick="return confirm('{% trans "Post this payment? This will update the cashbox." %}')">
+          <i class="bi bi-check2-circle"></i> {% trans "Post" %}
+        </button>
+      </form>
+      {% endif %}
+    {% else %}
+      <span class="badge bg-success fs-6 me-2">{% trans "Posted" %}</span>
+      {% if can_edit_financial and not payment.is_reversed %}
+      <a href="{% url 'projects:payment_reverse' project_pk=project.pk pk=payment.pk %}" class="btn btn-outline-danger btn-sm">
+        <i class="bi bi-arrow-counterclockwise"></i> {% trans "Reverse" %}
+      </a>
+      {% endif %}
+      {% if payment.is_reversed %}<span class="badge bg-danger ms-2">{% trans "Reversed" %}</span>{% endif %}
+    {% endif %}
+    <a href="{% url 'projects:payment_list' project_pk=project.pk %}" class="btn btn-outline-secondary btn-sm ms-2">
+      <i class="bi bi-arrow-left"></i> {% trans "Back" %}
+    </a>
+    <button onclick="window.print()" class="btn btn-outline-secondary btn-sm ms-1"><i class="bi bi-printer"></i> {% trans "Print" %}</button>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-7">
+    <div class="card h-100">
+      <div class="card-header">{% trans "Details" %}</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-md-4">{% trans "Vendor" %}</dt><dd class="col-md-8">{{ payment.contact.name }}</dd>
+          <dt class="col-md-4">{% trans "Date" %}</dt><dd class="col-md-8">{{ payment.date }}</dd>
+          <dt class="col-md-4">{% trans "Cashbox" %}</dt><dd class="col-md-8">{{ payment.cashbox.name }}</dd>
+          <dt class="col-md-4">{% trans "Currency" %}</dt><dd class="col-md-8">{{ payment.currency.code }}</dd>
+          <dt class="col-md-4">{% trans "Exchange Rate" %}</dt><dd class="col-md-8">{{ payment.exchange_rate }}</dd>
+          {% if payment.bill %}
+          <dt class="col-md-4">{% trans "Applied to Bill" %}</dt>
+          <dd class="col-md-8"><a href="{% url 'projects:bill_detail' project_pk=project.pk pk=payment.bill.pk %}">{{ payment.bill.number }}</a></dd>
+          {% endif %}
+          {% if payment.notes %}
+          <dt class="col-md-4">{% trans "Notes" %}</dt><dd class="col-md-8">{{ payment.notes }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-5">
+    <div class="card h-100">
+      <div class="card-header">{% trans "Amounts" %}</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-7">{% trans "Amount (TC)" %}</dt>
+          <dd class="col-5 text-end fw-bold">{{ payment.currency.code }} {{ payment.amount|floatformat:2|intcomma }}</dd>
+          <dt class="col-7">{% trans "Amount (BC)" %}</dt>
+          <dd class="col-5 text-end">{{ project.base_currency.code }} {{ payment.amount_in_base|floatformat:2|intcomma }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if payment.journal_entry %}
+<div class="card mt-3">
+  <div class="card-header">{% trans "Journal Entry" %} — {{ payment.journal_entry.number }}</div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>{% trans "Account" %}</th>
+          <th class="text-end">{% trans "Debit (BC)" %}</th>
+          <th class="text-end">{% trans "Credit (BC)" %}</th>
+          <th class="text-end">{% trans "Debit (TC)" %}</th>
+          <th class="text-end">{% trans "Credit (TC)" %}</th>
+          <th>{% trans "Currency" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for line in payment.journal_entry.lines.all %}
+        <tr>
+          <td>{{ line.account.code }} — {{ line.account.name }}</td>
+          <td class="text-end">{% if line.debit %}{{ line.debit|floatformat:2|intcomma }}{% endif %}</td>
+          <td class="text-end">{% if line.credit %}{{ line.credit|floatformat:2|intcomma }}{% endif %}</td>
+          <td class="text-end">{% if line.debit_tc %}{{ line.debit_tc|floatformat:2|intcomma }}{% endif %}</td>
+          <td class="text-end">{% if line.credit_tc %}{{ line.credit_tc|floatformat:2|intcomma }}{% endif %}</td>
+          <td>{% if line.transaction_currency %}{{ line.transaction_currency.code }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+</div>{# end #screen-content #}
+
+<!-- ── Print area ──────────────────────────────────────────── -->
+<div id="print-area" style="display:none">
+  <div style="text-align:center; margin-bottom:16px;">
+    {% if project.print_logo %}<img src="{{ project.print_logo.url }}" alt="" style="max-height:80px; max-width:200px; display:block; margin:0 auto 8px;">{% endif %}
+    {% if project.print_heading %}<h3 style="margin:0;">{{ project.print_heading }}</h3>{% endif %}
+    {% if project.print_subheading %}<p style="margin:4px 0 0; color:#555;">{{ project.print_subheading }}</p>{% endif %}
+  </div>
+  <hr style="border-top:2px solid #000; margin-bottom:12px;">
+  <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+    <h5 style="margin:0;">{% trans "Payment" %}: {{ payment.number }}</h5>
+    <span>{% if payment.status == "posted" %}{% trans "Posted" %}{% else %}{% trans "Draft" %}{% endif %}</span>
+  </div>
+  <table style="width:100%; border-collapse:collapse; margin-bottom:16px; font-size:0.9em;">
+    <tr>
+      <th style="width:25%; text-align:left; padding:4px 8px; background:#f0f0f0;">{% trans "Vendor" %}</th>
+      <td style="padding:4px 8px;">{{ payment.contact.name }}</td>
+      <th style="width:20%; text-align:left; padding:4px 8px; background:#f0f0f0;">{% trans "Date" %}</th>
+      <td style="padding:4px 8px;">{{ payment.date }}</td>
+    </tr>
+    <tr>
+      <th style="text-align:left; padding:4px 8px; background:#f0f0f0;">{% trans "Cashbox" %}</th>
+      <td style="padding:4px 8px;">{{ payment.cashbox.name }}</td>
+      <th style="text-align:left; padding:4px 8px; background:#f0f0f0;">{% trans "Currency" %}</th>
+      <td style="padding:4px 8px;">{{ payment.currency.code }}</td>
+    </tr>
+    {% if payment.bill %}
+    <tr>
+      <th style="text-align:left; padding:4px 8px; background:#f0f0f0;">{% trans "Bill" %}</th>
+      <td colspan="3" style="padding:4px 8px;">{{ payment.bill.number }}</td>
+    </tr>
+    {% endif %}
+    {% if payment.notes %}
+    <tr>
+      <th style="text-align:left; padding:4px 8px; background:#f0f0f0;">{% trans "Notes" %}</th>
+      <td colspan="3" style="padding:4px 8px;">{{ payment.notes }}</td>
+    </tr>
+    {% endif %}
+  </table>
+  <table style="width:50%; margin-left:auto; border-collapse:collapse; font-size:1em;">
+    <tr style="background:#1a3f6f; color:#fff;">
+      <th style="padding:6px 12px; text-align:left;">{% trans "Amount" %}</th>
+      <th style="padding:6px 12px; text-align:right;">{{ payment.currency.code }} {{ payment.amount|floatformat:2|intcomma }}</th>
+    </tr>
+    {% if payment.currency.code != project.base_currency.code %}
+    <tr style="background:#f9f9f9;">
+      <td style="padding:4px 12px;">{% trans "Amount (Base)" %}</td>
+      <td style="padding:4px 12px; text-align:right;">{{ project.base_currency.code }} {{ payment.amount_in_base|floatformat:2|intcomma }}</td>
+    </tr>
+    {% endif %}
+  </table>
+  <div style="display:flex; gap:40px; margin-top:64px;">
+    <div style="flex:1; text-align:center; border-top:1px solid #000; padding-top:4px; font-size:0.85em;">{% trans "Paid By" %}</div>
+    <div style="flex:1; text-align:center; border-top:1px solid #000; padding-top:4px; font-size:0.85em;">{% trans "Approved By" %}</div>
+  </div>
+</div>
+
+{% endblock %}

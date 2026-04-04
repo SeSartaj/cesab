@@ -12,6 +12,14 @@ class Project(models.Model):
     start_date = models.DateField(null=True, blank=True, verbose_name=_("Start Date"))
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True, verbose_name=_("Active"))
+    # ---------- print / branding ----------
+    print_heading = models.CharField(max_length=200, blank=True, verbose_name=_("Print Heading"))
+    print_subheading = models.CharField(max_length=200, blank=True, verbose_name=_("Print Sub-heading"))
+    print_logo = models.ImageField(
+        upload_to="project_logos/", blank=True, null=True,
+        verbose_name=_("Print Logo"),
+        help_text=_("Logo shown on printed bills and invoices"),
+    )
 
     class Meta:
         verbose_name = _("Project")

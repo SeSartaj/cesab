@@ -3,7 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from core.models import Currency
 from cash.models import Cashbox
 from partners.models import ProjectPartner
-from vendors.models import Vendor
+from vendors.models import Contact
 from employees.models import ProjectEmployee
 from coa.models import Account
 
@@ -87,7 +87,7 @@ class ShareholderWithdrawalForm(BaseTxForm):
 
 class VendorBillForm(BaseTxForm):
     vendor = forms.ModelChoiceField(
-        queryset=Vendor.objects.none(),
+        queryset=Contact.objects.none(),
         widget=forms.Select(attrs={"class": "form-select"}),
         label=_("Vendor"),
     )
@@ -104,7 +104,7 @@ class VendorBillForm(BaseTxForm):
 
     def __init__(self, project, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["vendor"].queryset = Vendor.objects.filter(project=project, is_active=True)
+        self.fields["vendor"].queryset = Contact.objects.filter(project=project, is_active=True)
         self.fields["expense_account"].queryset = Account.objects.filter(
             project=project, account_type="expense", is_active=True
         )
@@ -112,7 +112,7 @@ class VendorBillForm(BaseTxForm):
 
 class VendorAdvanceForm(BaseTxForm):
     vendor = forms.ModelChoiceField(
-        queryset=Vendor.objects.none(),
+        queryset=Contact.objects.none(),
         widget=forms.Select(attrs={"class": "form-select"}),
         label=_("Vendor"),
     )
@@ -129,13 +129,13 @@ class VendorAdvanceForm(BaseTxForm):
 
     def __init__(self, project, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["vendor"].queryset = Vendor.objects.filter(project=project, is_active=True)
+        self.fields["vendor"].queryset = Contact.objects.filter(project=project, is_active=True)
         self.fields["cashbox"].queryset = Cashbox.objects.filter(project=project, is_active=True)
 
 
 class VendorPaymentForm(BaseTxForm):
     vendor = forms.ModelChoiceField(
-        queryset=Vendor.objects.none(),
+        queryset=Contact.objects.none(),
         widget=forms.Select(attrs={"class": "form-select"}),
         label=_("Vendor"),
     )
@@ -152,7 +152,7 @@ class VendorPaymentForm(BaseTxForm):
 
     def __init__(self, project, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["vendor"].queryset = Vendor.objects.filter(project=project, is_active=True)
+        self.fields["vendor"].queryset = Contact.objects.filter(project=project, is_active=True)
         self.fields["cashbox"].queryset = Cashbox.objects.filter(project=project, is_active=True)
         # Pre-select base currency so the dropdown defaults to the right choice
         if not args and "initial" not in kwargs:
@@ -347,7 +347,7 @@ class ManualJEForm(forms.Form):
 class VendorAdvanceSettlementForm(BaseTxForm):
     """Settle vendor advance against outstanding payable."""
     vendor = forms.ModelChoiceField(
-        queryset=Vendor.objects.none(),
+        queryset=Contact.objects.none(),
         widget=forms.Select(attrs={"class": "form-select"}),
         label=_("Vendor"),
     )
@@ -359,13 +359,13 @@ class VendorAdvanceSettlementForm(BaseTxForm):
 
     def __init__(self, project, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["vendor"].queryset = Vendor.objects.filter(project=project, is_active=True)
+        self.fields["vendor"].queryset = Contact.objects.filter(project=project, is_active=True)
 
 
 class VendorDirectPaymentForm(BaseTxForm):
     """Pay vendor directly (no bill required) — treated as an expense."""
     vendor = forms.ModelChoiceField(
-        queryset=Vendor.objects.none(),
+        queryset=Contact.objects.none(),
         widget=forms.Select(attrs={"class": "form-select"}),
         label=_("Vendor"),
     )
@@ -387,7 +387,7 @@ class VendorDirectPaymentForm(BaseTxForm):
 
     def __init__(self, project, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["vendor"].queryset = Vendor.objects.filter(project=project, is_active=True)
+        self.fields["vendor"].queryset = Contact.objects.filter(project=project, is_active=True)
         self.fields["expense_account"].queryset = Account.objects.filter(
             project=project, account_type="expense", is_active=True
         )
@@ -397,7 +397,7 @@ class VendorDirectPaymentForm(BaseTxForm):
 class VendorRefundForm(BaseTxForm):
     """Vendor refunds money back to a cashbox."""
     vendor = forms.ModelChoiceField(
-        queryset=Vendor.objects.none(),
+        queryset=Contact.objects.none(),
         widget=forms.Select(attrs={"class": "form-select"}),
         label=_("Vendor"),
     )
@@ -414,5 +414,5 @@ class VendorRefundForm(BaseTxForm):
 
     def __init__(self, project, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["vendor"].queryset = Vendor.objects.filter(project=project, is_active=True)
+        self.fields["vendor"].queryset = Contact.objects.filter(project=project, is_active=True)
         self.fields["cashbox"].queryset = Cashbox.objects.filter(project=project, is_active=True)

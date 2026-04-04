@@ -3,20 +3,22 @@
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-6">
+  <div class="col-md-7">
     <div class="card">
       <div class="card-header"><i class="bi bi-folder-plus"></i> {{ title }}</div>
       <div class="card-body">
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
           {% csrf_token %}
           {% for field in form %}
-          <div class="mb-3">
-            <label class="form-label">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}
-            <div class="text-danger small mt-1">{{ field.errors.0 }}</div>
+            {% if field.name == "print_heading" %}
+            <hr>
+            <p class="fw-semibold text-muted small mb-2">{% trans "Print / Branding" %}</p>
             {% endif %}
-          </div>
+            <div class="mb-3">
+              <label class="form-label">{{ field.label }}{% if field.help_text %} <small class="text-muted">— {{ field.help_text }}</small>{% endif %}</label>
+              {{ field }}
+              {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
+            </div>
           {% endfor %}
           <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> {% trans "Save" %}</button>

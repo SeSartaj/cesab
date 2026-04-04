@@ -11,7 +11,7 @@ from projects.permissions import can_access_financial
 from cash.models import Cashbox
 from coa.models import Account
 from journal.models import JournalEntry, JournalLine
-from vendors.models import Vendor
+from vendors.models import Contact
 import transactions.services as svc
 from . import forms as tx_forms
 
@@ -129,9 +129,9 @@ def vendor_bill(request, project_pk):
     initial = {"date": timezone.now().date(), "use_base_currency": True}
     if initial_vendor_pk:
         try:
-            locked_vendor = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+            locked_vendor = Contact.objects.get(pk=initial_vendor_pk, project=project)
             initial["vendor"] = locked_vendor
-        except Vendor.DoesNotExist:
+        except Contact.DoesNotExist:
             pass
 
     if request.method == "POST":
@@ -176,9 +176,9 @@ def vendor_advance(request, project_pk):
     initial = {"date": timezone.now().date(), "use_base_currency": True}
     if initial_vendor_pk:
         try:
-            locked_vendor = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+            locked_vendor = Contact.objects.get(pk=initial_vendor_pk, project=project)
             initial["vendor"] = locked_vendor
-        except Vendor.DoesNotExist:
+        except Contact.DoesNotExist:
             pass
 
     if request.method == "POST":
@@ -226,9 +226,9 @@ def vendor_payment(request, project_pk):
     initial = {"date": timezone.now().date()}
     if initial_vendor_pk:
         try:
-            locked_vendor = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+            locked_vendor = Contact.objects.get(pk=initial_vendor_pk, project=project)
             initial["vendor"] = locked_vendor
-        except Vendor.DoesNotExist:
+        except Contact.DoesNotExist:
             pass
 
     if request.method == "POST":
@@ -280,20 +280,28 @@ def vendor_payment(request, project_pk):
     # { vendor_pk: { currency_code: {amount, symbol} } }
     from django.db.models import Sum as DbSum
     vendor_payable = {}
-    for v in Vendor.objects.filter(project=project, is_active=True).select_related("payable_account"):
+    for v in Contact.objects.filter(project=project, is_active=True).select_related("payable_account"):
         rows = (
             JournalLine.objects.active()
             .filter(account=v.payable_account)
             .values("transaction_currency__code", "transaction_currency__symbol")
-            .annotate(cr=DbSum("credit_tc"), dr=DbSum("debit_tc"))
+            .annotate(
+                cr=DbSum("credit_tc"), dr=DbSum("debit_tc"),
+                cr_bc=DbSum("credit"), dr_bc=DbSum("debit"),
+            )
         )
         balances = {}
         for row in rows:
             code = row["transaction_currency__code"]
             from decimal import Decimal
-            net = float((row["cr"] or Decimal("0")) - (row["dr"] or Decimal("0")))
+            net    = float((row["cr"] or Decimal("0")) - (row["dr"] or Decimal("0")))
+            net_bc = float((row["cr_bc"] or Decimal("0")) - (row["dr_bc"] or Decimal("0")))
             if net > 0.005:
-                balances[code] = {"amount": net, "symbol": row["transaction_currency__symbol"] or ""}
+                balances[code] = {
+                    "amount":       net,
+                    "symbol":       row["transaction_currency__symbol"] or "",
+                    "booking_rate": round(net_bc / net, 6) if net > 0.001 else 1.0,
+                }
         if balances:
             vendor_payable[str(v.pk)] = balances
 
@@ -581,9 +589,9 @@ def vendor_advance_settlement(request, project_pk):
     initial = {"date": timezone.now().date(), "use_base_currency": True}
     if initial_vendor_pk:
         try:
-            locked_vendor = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+            locked_vendor = Contact.objects.get(pk=initial_vendor_pk, project=project)
             initial["vendor"] = locked_vendor
-        except Vendor.DoesNotExist:
+        except Contact.DoesNotExist:
             pass
 
     if request.method == "POST":
@@ -631,9 +639,9 @@ def vendor_direct_payment(request, project_pk):
     initial = {"date": timezone.now().date(), "use_base_currency": True}
     if initial_vendor_pk:
         try:
-            locked_vendor = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+            locked_vendor = Contact.objects.get(pk=initial_vendor_pk, project=project)
             initial["vendor"] = locked_vendor
-        except Vendor.DoesNotExist:
+        except Contact.DoesNotExist:
             pass
 
     if request.method == "POST":
@@ -682,9 +690,9 @@ def vendor_refund(request, project_pk):
     initial = {"date": timezone.now().date(), "use_base_currency": True}
     if initial_vendor_pk:
         try:
-            locked_vendor = Vendor.objects.get(pk=initial_vendor_pk, project=project)
+            locked_vendor = Contact.objects.get(pk=initial_vendor_pk, project=project)
             initial["vendor"] = locked_vendor
-        except Vendor.DoesNotExist:
+        except Contact.DoesNotExist:
             pass
 
     if request.method == "POST":

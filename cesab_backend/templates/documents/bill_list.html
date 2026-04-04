@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% load i18n humanize %}
+{% block title %}{% trans "Vendor Bills" %}{% endblock %}
+{% block sidebar %}{% include "projects/_sidebar.html" with active="bills" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5><i class="bi bi-receipt"></i> {% trans "Vendor Bills" %} — {{ project.name }}</h5>
+  {% if can_add_financial %}
+  <a href="{% url 'projects:bill_create' project_pk=project.pk %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-circle"></i> {% trans "New Bill" %}
+  </a>
+  {% endif %}
+</div>
+
+{# ── Search / filter bar ─────────────────────────────────────────────── #}
+<form method="get" class="row g-2 mb-3 align-items-end">
+  <div class="col-sm-4">
+    <label class="form-label small text-muted mb-1">{% trans "Search" %}</label>
+    <div class="input-group input-group-sm">
+      <span class="input-group-text"><i class="bi bi-search"></i></span>
+      <input type="text" name="q" value="{{ q }}" class="form-control"
+             placeholder="{% trans 'Number or vendor…' %}">
+    </div>
+  </div>
+  <div class="col-sm-3">
+    <label class="form-label small text-muted mb-1">{% trans "Currency" %}</label>
+    <select name="currency" class="form-select form-select-sm">
+      <option value="">{% trans "All currencies" %}</option>
+      {% for c in filter_currencies %}
+      <option value="{{ c.pk }}" {% if selected_currency == c.pk|stringformat:"s" %}selected{% endif %}>
+        {{ c.code }}{% if c.name %} — {{ c.name }}{% endif %}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-sm-3">
+    <label class="form-label small text-muted mb-1">{% trans "Vendor" %}</label>
+    <select name="contact" class="form-select form-select-sm">
+      <option value="">{% trans "All vendors" %}</option>
+      {% for ct in filter_contacts %}
+      <option value="{{ ct.pk }}" {% if selected_contact == ct.pk|stringformat:"s" %}selected{% endif %}>
+        {{ ct.name }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-sm-2 d-flex gap-1">
+    <button type="submit" class="btn btn-outline-primary btn-sm flex-grow-1">
+      <i class="bi bi-funnel"></i> {% trans "Filter" %}
+    </button>
+    {% if q or selected_currency or selected_contact %}
+    <a href="?" class="btn btn-outline-secondary btn-sm" title="{% trans 'Clear filters' %}">
+      <i class="bi bi-x-lg"></i>
+    </a>
+    {% endif %}
+  </div>
+</form>
+
+{# ── Table ───────────────────────────────────────────────────────────── #}
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th>{% trans "Number" %}</th>
+          <th>{% trans "Vendor" %}</th>
+          <th>{% trans "Date" %}</th>
+          <th>{% trans "Due" %}</th>
+          <th class="text-end">{% trans "Total" %}</th>
+          <th class="text-end">
+            {% if current_sort == "paid_tc" %}
+              <a href="?{% if q %}q={{ q }}&{% endif %}{% if selected_currency %}currency={{ selected_currency }}&{% endif %}{% if selected_contact %}contact={{ selected_contact }}&{% endif %}sort=-paid_tc" class="text-decoration-none text-dark">
+                {% trans "Paid" %} <i class="bi bi-sort-up"></i>
+              </a>
+            {% elif current_sort == "-paid_tc" %}
+              <a href="?{% if q %}q={{ q }}&{% endif %}{% if selected_currency %}currency={{ selected_currency }}&{% endif %}{% if selected_contact %}contact={{ selected_contact }}&{% endif %}sort=paid_tc" class="text-decoration-none text-dark">
+                {% trans "Paid" %} <i class="bi bi-sort-down"></i>
+              </a>
+            {% else %}
+              <a href="?{% if q %}q={{ q }}&{% endif %}{% if selected_currency %}currency={{ selected_currency }}&{% endif %}{% if selected_contact %}contact={{ selected_contact }}&{% endif %}sort=-paid_tc" class="text-decoration-none text-dark">
+                {% trans "Paid" %} <i class="bi bi-arrow-down-up text-muted"></i>
+              </a>
+            {% endif %}
+          </th>
+          <th class="text-end">
+            {% if current_sort == "balance_tc" %}
+              <a href="?{% if q %}q={{ q }}&{% endif %}{% if selected_currency %}currency={{ selected_currency }}&{% endif %}{% if selected_contact %}contact={{ selected_contact }}&{% endif %}sort=-balance_tc" class="text-decoration-none text-dark">
+                {% trans "Remaining" %} <i class="bi bi-sort-up"></i>
+              </a>
+            {% elif current_sort == "-balance_tc" %}
+              <a href="?{% if q %}q={{ q }}&{% endif %}{% if selected_currency %}currency={{ selected_currency }}&{% endif %}{% if selected_contact %}contact={{ selected_contact }}&{% endif %}sort=balance_tc" class="text-decoration-none text-dark">
+                {% trans "Remaining" %} <i class="bi bi-sort-down"></i>
+              </a>
+            {% else %}
+              <a href="?{% if q %}q={{ q }}&{% endif %}{% if selected_currency %}currency={{ selected_currency }}&{% endif %}{% if selected_contact %}contact={{ selected_contact }}&{% endif %}sort=-balance_tc" class="text-decoration-none text-dark">
+                {% trans "Remaining" %} <i class="bi bi-arrow-down-up text-muted"></i>
+              </a>
+            {% endif %}
+          </th>
+          <th>{% trans "Status" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for bill in bills %}
+        {% with paid=bill.paid_tc balance=bill.balance_tc %}
+        <tr class="{% if bill.is_overdue %}table-danger{% endif %}">
+          <td><a href="{% url 'projects:bill_detail' project_pk=project.pk pk=bill.pk %}">{{ bill.number }}</a></td>
+          <td>{{ bill.contact.name }}</td>
+          <td class="text-nowrap text-muted">{{ bill.date }}</td>
+          <td class="text-nowrap">
+            {% if bill.due_date %}
+              {{ bill.due_date }}
+              {% if bill.is_overdue %}
+                <span class="badge bg-danger ms-1">{% trans "Overdue" %}</span>
+              {% endif %}
+            {% else %}-{% endif %}
+          </td>
+          <td class="text-end fw-semibold">
+            {{ bill.total_amount|floatformat:2|intcomma }}
+            <span class="text-muted">{{ bill.currency.code }}</span>
+          </td>
+          <td class="text-end text-success">
+            {% if paid %}
+              {{ paid|floatformat:2|intcomma }}
+              <span class="text-muted">{{ bill.currency.code }}</span>
+            {% else %}-{% endif %}
+          </td>
+          <td class="text-end {% if balance > 0 %}text-danger fw-semibold{% else %}text-success{% endif %}">
+            {{ balance|floatformat:2|intcomma }}
+            <span class="text-muted">{{ bill.currency.code }}</span>
+          </td>
+          <td>
+            {% if bill.status == "posted" %}
+              <span class="badge bg-success">{% trans "Posted" %}</span>
+            {% else %}
+              <span class="badge bg-secondary">{% trans "Draft" %}</span>
+            {% endif %}
+            {% if bill.is_reversed %}<span class="badge bg-warning text-dark">{% trans "Reversed" %}</span>{% endif %}
+          </td>
+        </tr>
+        {% endwith %}
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-3">{% trans "No bills found." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

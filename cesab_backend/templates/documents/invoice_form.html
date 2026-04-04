@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% load i18n crispy_forms_tags %}
+{% block title %}{{ title }}{% endblock %}
+{% block sidebar %}{% include "projects/_sidebar.html" with active="invoices" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> {{ title }}</h5>
+  <a href="{% url 'projects:invoice_list' project_pk=project.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> {% trans "Back" %}
+  </a>
+</div>
+{% if messages %}{% for m in messages %}<div class="alert alert-{{ m.tags }}">{{ m }}</div>{% endfor %}{% endif %}
+
+<form method="post" id="invoice-form">
+  {% csrf_token %}
+  <div class="card mb-3">
+    <div class="card-header">{% trans "Invoice Details" %}</div>
+    <div class="card-body">
+      {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="row g-3">
+        <div class="col-md-5">{{ form.contact|as_crispy_field }}</div>
+        <div class="col-md-3">{{ form.date|as_crispy_field }}</div>
+        <div class="col-md-3">{{ form.due_date|as_crispy_field }}</div>
+        {% include "includes/_currency_exchange_rate.html" with form=form project=project %}
+        <div class="col-12">{{ form.notes|as_crispy_field }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>{% trans "Lines" %}</span>
+      <button type="button" class="btn btn-sm btn-outline-primary" id="add-line-btn">
+        <i class="bi bi-plus-circle"></i> {% trans "Add Line" %}
+      </button>
+    </div>
+    <div class="card-body p-0">
+      {{ formset.management_form }}
+      {% if formset.non_form_errors %}<div class="alert alert-danger m-2">{{ formset.non_form_errors }}</div>{% endif %}
+      <table class="table table-sm mb-0" id="lines-table">
+        <thead class="table-light">
+          <tr>
+            <th style="width:25%">{% trans "Description" %}</th>
+            <th style="width:30%">{% trans "Account" %}</th>
+            <th style="width:10%">{% trans "Qty" %}</th>
+            <th style="width:12%">{% trans "Unit Price" %}</th>
+            <th style="width:14%">{% trans "Tax" %}</th>
+            <th style="width:9%" class="text-end">{% trans "Total" %}</th>
+            <th style="width:4%"></th>
+          </tr>
+        </thead>
+        <tbody id="lines-body">
+          {% for line_form in formset %}
+          <tr class="line-row{% if line_form.errors %} table-danger{% endif %}">
+            <td>
+              {{ line_form.id }}
+              {{ line_form.description }}
+              {% if line_form.description.errors %}<div class="text-danger small">{{ line_form.description.errors }}</div>{% endif %}
+            </td>
+            <td>
+              {{ line_form.account }}
+              {% if line_form.account.errors %}<div class="text-danger small">{{ line_form.account.errors }}</div>{% endif %}
+            </td>
+            <td>{{ line_form.quantity }}</td>
+            <td>{{ line_form.unit_price }}</td>
+            <td>{{ line_form.tax }}</td>
+            <td class="text-end line-total fw-semibold"></td>
+            <td class="text-center">
+              <label class="d-none">{{ line_form.DELETE }}</label>
+              <button type="button" class="btn btn-sm btn-link text-danger p-0 remove-line-btn" title="{% trans 'Remove' %}">
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="table-light">
+          <tr>
+            <td colspan="5" class="text-end fw-semibold">{% trans "Subtotal" %}</td>
+            <td class="text-end fw-semibold" id="grand-subtotal">—</td>
+            <td></td>
+          </tr>
+          <tr id="tax-row" class="d-none">
+            <td colspan="5" class="text-end">{% trans "Tax" %}</td>
+            <td class="text-end" id="grand-tax">—</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td colspan="5" class="text-end fw-bold">{% trans "Total" %}</td>
+            <td class="text-end fw-bold" id="grand-total">—</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mb-4">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> {% trans "Save Draft" %}</button>
+    <a href="{% url 'projects:invoice_list' project_pk=project.pk %}" class="btn btn-outline-secondary">{% trans "Cancel" %}</a>
+  </div>
+</form>
+
+{# Hidden empty row template for JS cloning #}
+<table class="d-none"><tbody id="empty-line-template">
+  {% with line_form=formset.empty_form %}
+  <tr class="line-row">
+    <td>{{ line_form.id }}{{ line_form.description }}</td>
+    <td>{{ line_form.account }}</td>
+    <td>{{ line_form.quantity }}</td>
+    <td>{{ line_form.unit_price }}</td>
+    <td>{{ line_form.tax }}</td>
+    <td class="text-end line-total fw-semibold"></td>
+    <td class="text-center">
+      <label class="d-none">{{ line_form.DELETE }}</label>
+      <button type="button" class="btn btn-sm btn-link text-danger p-0 remove-line-btn" title="{% trans 'Remove' %}">
+        <i class="bi bi-trash"></i>
+      </button>
+    </td>
+  </tr>
+  {% endwith %}
+</tbody></table>
+
+<script>
+(function () {
+  "use strict";
+
+  // ── Dynamic lines ──────────────────────────────────────────────────────
+  const tbody = document.getElementById("lines-body");
+  const totalFormsInput = document.querySelector("[name$=TOTAL_FORMS]");
+
+  function bindRemove(row) {
+    row.querySelector(".remove-line-btn")?.addEventListener("click", function () {
+      const cb = row.querySelector("input[type=checkbox][name$=DELETE]");
+      if (cb) {
+        cb.checked = true;
+        row.style.display = "none";
+      } else {
+        row.remove();
+      }
+      updateTotals();
+    });
+  }
+
+  function getVal(row, sel) {
+    const el = row.querySelector(sel);
+    return el ? parseFloat(el.value) || 0 : 0;
+  }
+
+  function getTaxRate(row) {
+    const taxSel = row.querySelector("select[name$=tax]");
+    if (!taxSel || !taxSel.value) return 0;
+    return parseFloat(taxSel.options[taxSel.selectedIndex].dataset.rate) || 0;
+  }
+
+  function updateRowTotal(row) {
+    const qty = getVal(row, "input[name$=quantity]");
+    const price = getVal(row, "input[name$=unit_price]");
+    const subtotal = qty * price;
+    const taxRate = getTaxRate(row);
+    const total = subtotal * (1 + taxRate);
+    const cell = row.querySelector(".line-total");
+    if (cell) cell.textContent = total > 0 ? total.toFixed(2) : "";
+  }
+
+  function updateTotals() {
+    let subtotal = 0, tax = 0;
+    tbody.querySelectorAll("tr.line-row").forEach(row => {
+      if (row.style.display === "none") return;
+      const qty = getVal(row, "input[name$=quantity]");
+      const price = getVal(row, "input[name$=unit_price]");
+      const sub = qty * price;
+      const taxRate = getTaxRate(row);
+      subtotal += sub;
+      tax += sub * taxRate;
+      updateRowTotal(row);
+    });
+    document.getElementById("grand-subtotal").textContent = subtotal.toFixed(2);
+    document.getElementById("grand-total").textContent = (subtotal + tax).toFixed(2);
+    const taxRow = document.getElementById("tax-row");
+    if (tax > 0) {
+      document.getElementById("grand-tax").textContent = tax.toFixed(2);
+      taxRow.classList.remove("d-none");
+    } else {
+      taxRow.classList.add("d-none");
+    }
+  }
+
+  function bindRowEvents(row) {
+    bindRemove(row);
+    row.querySelectorAll("input, select").forEach(el => el.addEventListener("input", updateTotals));
+  }
+
+  tbody.querySelectorAll("tr.line-row").forEach(bindRowEvents);
+  updateTotals();
+
+  document.getElementById("add-line-btn")?.addEventListener("click", function () {
+    const template = document.querySelector("#empty-line-template tr");
+    const total = parseInt(totalFormsInput.value);
+    const clone = template.cloneNode(true);
+    clone.innerHTML = clone.innerHTML.replaceAll("__prefix__", total);
+    totalFormsInput.value = total + 1;
+    tbody.appendChild(clone);
+    bindRowEvents(clone);
+  });
+})();
+</script>
+{% endblock %}

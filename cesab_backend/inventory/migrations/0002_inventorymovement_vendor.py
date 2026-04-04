@@ -12,15 +12,15 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name="inventorymovement",
-            name="vendor",
+            name="contact",
             field=models.ForeignKey(
                 blank=True,
                 null=True,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="inventory_movements",
-                to="vendors.vendor",
-                verbose_name="Vendor",
-                help_text="Vendor for cash-to-vendor purchases",
+                to="vendors.contact",
+                verbose_name="Contact",
+                help_text="Contact for cash-to-vendor purchases",
             ),
         ),
     ]

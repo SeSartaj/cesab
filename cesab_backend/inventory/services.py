@@ -113,7 +113,7 @@ def record_inventory_purchase_cash_to_vendor(project, user, date, item, quantity
         quantity=qty,
         unit_cost=cost,
         total_cost=total,
-        vendor=vendor,
+        contact=vendor,
         journal_entry=je,
         created_by=user,
     )

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Trial Balance" %}{% endblock %}
+{% block sidebar %}{% include "projects/_sidebar.html" with active="trial_balance" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5><i class="bi bi-table"></i> {% trans "Trial Balance" %} — {{ project.name }}</h5>
+</div>
+
+{# ── Date-range filter ───────────────────────────────────────────────────── #}
+<form method="get" class="row g-2 align-items-end mb-4">
+  <div class="col-sm-auto">
+    <label class="form-label small fw-semibold mb-1">{% trans "From" %}</label>
+    <input type="date" name="date_from" class="form-control form-control-sm"
+           value="{{ date_from }}">
+  </div>
+  <div class="col-sm-auto">
+    <label class="form-label small fw-semibold mb-1">{% trans "To" %}</label>
+    <input type="date" name="date_to" class="form-control form-control-sm"
+           value="{{ date_to }}">
+  </div>
+  <div class="col-sm-auto">
+    <button type="submit" class="btn btn-sm btn-primary">
+      <i class="bi bi-funnel"></i> {% trans "Apply" %}
+    </button>
+    {% if date_from or date_to %}
+    <a href="{% url 'projects:trial_balance' project_pk=project.pk %}"
+       class="btn btn-sm btn-outline-secondary ms-1">
+      <i class="bi bi-x"></i> {% trans "Clear" %}
+    </a>
+    {% endif %}
+  </div>
+  {% if date_from or date_to %}
+  <div class="col-12">
+    <span class="badge bg-light text-dark border small">
+      <i class="bi bi-calendar-range"></i>
+      {% if date_from %}{{ date_from }}{% else %}…{% endif %}
+      →
+      {% if date_to %}{{ date_to }}{% else %}{% trans "today" %}{% endif %}
+    </span>
+  </div>
+  {% endif %}
+</form>
+
+{# ── Balance alert ───────────────────────────────────────────────────────── #}
+{% if not is_balanced %}
+<div class="alert alert-danger d-flex align-items-center gap-2 mb-3" role="alert">
+  <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+  <div>
+    <strong>{% trans "Books are out of balance!" %}</strong>
+    {% trans "Total debits do not equal total credits. This indicates a data integrity problem." %}
+  </div>
+</div>
+{% endif %}
+
+{# ── Main table ──────────────────────────────────────────────────────────── #}
+{% if groups %}
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th style="width:6rem">{% trans "Code" %}</th>
+          <th>{% trans "Account" %}</th>
+          <th style="width:7rem" class="text-muted small text-end">{% trans "Type" %}</th>
+          <th style="width:9rem" class="text-end">{% trans "Total Debits" %}</th>
+          <th style="width:9rem" class="text-end">{% trans "Total Credits" %}</th>
+          <th style="width:9rem" class="text-end fw-semibold">{% trans "Net Debit" %}</th>
+          <th style="width:9rem" class="text-end fw-semibold">{% trans "Net Credit" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for type_label, type_rows in groups.items %}
+        <tr class="table-secondary">
+          <td colspan="7" class="small fw-bold py-1 px-3 text-uppercase text-muted">
+            {{ type_label }}
+          </td>
+        </tr>
+        {% for row in type_rows %}
+        <tr>
+          <td class="text-muted small align-middle">{{ row.account.code }}</td>
+          <td class="align-middle">{{ row.account.name }}</td>
+          <td class="text-muted small text-end align-middle">{{ row.account.get_account_type_display }}</td>
+          <td class="text-end align-middle font-monospace small">{{ row.total_debit|floatformat:2 }}</td>
+          <td class="text-end align-middle font-monospace small">{{ row.total_credit|floatformat:2 }}</td>
+          <td class="text-end align-middle fw-semibold font-monospace
+              {% if row.net_debit > 0 %}text-dark{% else %}text-muted{% endif %}">
+            {% if row.net_debit > 0 %}{{ row.net_debit|floatformat:2 }}{% endif %}
+          </td>
+          <td class="text-end align-middle fw-semibold font-monospace
+              {% if row.net_credit > 0 %}text-dark{% else %}text-muted{% endif %}">
+            {% if row.net_credit > 0 %}{{ row.net_credit|floatformat:2 }}{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        {% endfor %}
+      </tbody>
+      <tfoot class="table-dark">
+        <tr>
+          <td colspan="3" class="fw-bold text-uppercase small">{% trans "Totals" %}</td>
+          <td class="text-end fw-bold font-monospace">{{ grand_debit|floatformat:2 }}</td>
+          <td class="text-end fw-bold font-monospace">{{ grand_credit|floatformat:2 }}</td>
+          <td class="text-end fw-bold font-monospace" colspan="2">
+            {% if is_balanced %}
+            <span class="text-success"><i class="bi bi-check-circle-fill"></i> {% trans "Balanced" %}</span>
+            {% else %}
+            <span class="text-danger"><i class="bi bi-exclamation-circle-fill"></i>
+              {% trans "Diff" %}: {{ grand_debit|floatformat:2 }} / {{ grand_credit|floatformat:2 }}
+            </span>
+            {% endif %}
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+{% else %}
+<div class="alert alert-light border text-muted">
+  <i class="bi bi-inbox"></i>
+  {% if date_from or date_to %}
+  {% trans "No journal activity found for the selected date range." %}
+  {% else %}
+  {% trans "No journal entries found for this project yet." %}
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

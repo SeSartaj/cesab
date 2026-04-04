@@ -5,8 +5,9 @@ Scenarios covered
 ─────────────────
 VendorPaymentFXTests
   1. Record a $100 USD bill at 60 AFN/USD.
-  2. Pay $60 from a USD cashbox — no exchange rate required from the caller;
-     the service auto-uses the original booking rate.
+  2a. Pay $60 from a USD cashbox at same rate (60) — no FX diff.
+  2b. Pay $60 from a USD cashbox at lower rate (55) — FX gain of 300 AFN
+      (Scenario A: same-currency cashbox, today's rate differs from booking).
   3. Pay the remaining $40 from an AFN cashbox at 62 AFN/USD — an FX loss of
      80 AFN is generated because the rate moved against us.
 """
@@ -85,8 +86,8 @@ class VendorPaymentFXTests(TestCase):
     Foreign       : USD
     Vendor        : "Cement Co"
     Bill          : 100 USD @ 60 AFN/USD  →  6 000 AFN payable
-    Payment 1     : 60 USD from USD cashbox  (no conversion; rate auto-detected)
-    Payment 2     : 40 USD from AFN cashbox  @ 62 AFN/USD  (FX loss 80 AFN)
+    Payment 1     : 60 USD from USD cashbox @ 60 AFN/USD (same as booking — no FX)
+    Payment 2     : 40 USD from AFN cashbox @ 62 AFN/USD  (FX loss 80 AFN)
     """
 
     @classmethod
@@ -159,12 +160,12 @@ class VendorPaymentFXTests(TestCase):
 
     def test_payment_from_usd_cashbox_no_fx(self):
         """
-        Paying $60 from a USD cashbox against a USD payable should:
+        Paying $60 from a USD cashbox at the same rate as the booking rate (60):
         - produce exactly 2 lines (payable + cashbox); no FX line
-        - debit payable 60 USD @ bill_rate (60) = 3 600 AFN
+        - debit payable 60 USD @ booking rate (60) = 3 600 AFN
         - credit USD cashbox 60 USD @ 60 = 3 600 AFN  (TC in USD)
         - leave 40 USD / 2 400 AFN still outstanding
-        - not require the caller to supply an exchange rate (exchange_rate=1 works)
+        - caller must now supply today's rate (same as booking → no FX diff)
         """
         self._record_bill()
 
@@ -176,11 +177,11 @@ class VendorPaymentFXTests(TestCase):
             cashbox=self.usd_cashbox,
             description="Pay $60 USD cashbox",
             currency=self.usd,
-            exchange_rate=1,          # caller does NOT need to supply a rate
+            exchange_rate=60,         # same as booking rate → no FX difference
         )
 
         lines = list(je.lines.all())
-        self.assertEqual(len(lines), 2, "No FX line expected when paying same-currency cashbox")
+        self.assertEqual(len(lines), 2, "No FX line expected when today's rate equals booking rate")
 
         payable_line = next(l for l in lines if l.account == self.vendor.payable_account)
         cashbox_line = next(l for l in lines if l.account == self.usd_cashbox.account)
@@ -201,6 +202,60 @@ class VendorPaymentFXTests(TestCase):
         self.assertEqual(self.usd_cashbox.balance_in_currency(), Decimal("140.00"))
 
     # ------------------------------------------------------------------
+    # Step 2b: Scenario A — same-currency cashbox but rate changed → FX gain
+    # ------------------------------------------------------------------
+
+    def test_payment_from_usd_cashbox_with_fx_gain(self):
+        """
+        Scenario A: paying $60 from a USD cashbox at 55 AFN/USD when the bill
+        was booked at 60 AFN/USD (stronger base currency → we pay a smaller
+        liability in base-currency terms):
+        - payable debited at booking rate: 60 × 60 = 3 600 AFN
+        - USD cashbox credited at today's rate: 60 × 55 = 3 300 AFN
+        - FX Gain = 300 AFN (credit to FX Gain account)
+        - 3 lines: payable + FX gain + USD cashbox
+        """
+        self._record_bill()
+
+        je = svc.vendor_payment_against_bill(
+            project=self.project, user=self.user,
+            date=date(2026, 2, 20),
+            vendor=self.vendor,
+            amount=60,
+            cashbox=self.usd_cashbox,
+            description="Pay $60 at rate 55",
+            currency=self.usd,
+            exchange_rate=55,  # lower rate than booking → FX gain
+        )
+
+        lines = list(je.lines.all())
+        self.assertEqual(len(lines), 3, "Expected payable + FX Gain + USD cashbox lines")
+
+        payable_line = next(l for l in lines if l.account == self.vendor.payable_account)
+        cashbox_line = next(l for l in lines if l.account == self.usd_cashbox.account)
+        fx_lines     = [l for l in lines
+                        if l.account not in (self.vendor.payable_account, self.usd_cashbox.account)]
+        self.assertEqual(len(fx_lines), 1)
+        fx_line = fx_lines[0]
+
+        # Payable debited at original booking rate
+        self.assertEqual(payable_line.debit,    Decimal("3600.00"))
+        self.assertEqual(payable_line.debit_tc, Decimal("60.00"))
+
+        # USD cashbox credited at today's lower rate
+        self.assertEqual(cashbox_line.credit,    Decimal("3300.00"))
+        self.assertEqual(cashbox_line.credit_tc, Decimal("60.00"))
+        self.assertEqual(cashbox_line.transaction_currency, self.usd)
+
+        # FX Gain = 3600 - 3300 = 300 AFN
+        self.assertEqual(fx_line.credit,    Decimal("300.00"))
+        self.assertEqual(fx_line.credit_tc, Decimal("300.00"))
+        self.assertEqual(fx_line.debit,     Decimal("0.00"))
+
+        # 40 USD / 2 400 AFN still outstanding
+        self.assertEqual(self.vendor.balance_payable(), Decimal("2400.00"))
+
+    # ------------------------------------------------------------------
     # Step 3: Pay remaining $40 from AFN cashbox at 62 AFN/USD → FX loss
     # ------------------------------------------------------------------
 
@@ -214,13 +269,13 @@ class VendorPaymentFXTests(TestCase):
         """
         self._record_bill()
 
-        # First clear $60 via USD cashbox (same as previous test)
+        # First clear $60 via USD cashbox at booking rate (no FX diff)
         svc.vendor_payment_against_bill(
             project=self.project, user=self.user,
             date=date(2026, 2, 15),
             vendor=self.vendor,
             amount=60, cashbox=self.usd_cashbox,
-            currency=self.usd, exchange_rate=1,
+            currency=self.usd, exchange_rate=60,
         )
 
         # Now pay the remaining $40 from the AFN cashbox at 62

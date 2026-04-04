@@ -249,18 +249,31 @@ document.addEventListener("DOMContentLoaded", function () {
       cashboxHint.textContent = "";
     }
 
-    // -- Exchange rate row: show only when cashbox currency ≠ tx currency --
-    const needsRate = cbCurr && cbCurr.code !== txCurr.code;
+    // -- Exchange rate row: show when currencies differ OR when paying in foreign currency
+    //    (Scenario A: USD cashbox + USD bill both need today's rate for FX gain/loss)
+    const isForeignPayment = txCurr.code !== baseCurrCode;
+    const needsRate = cbCurr && (cbCurr.code !== txCurr.code || isForeignPayment);
     rateRow.style.display = needsRate ? "" : "none";
     if (needsRate) {
-      // Figure out which is the foreign currency and which is base
+      const isScenarioA = cbCurr.code === txCurr.code && isForeignPayment;
       const foreignCode = txCurr.code !== baseCurrCode ? txCurr.code : cbCurr.code;
       rateLabel.textContent = "(1 " + foreignCode + " = ? " + baseCurrCode + ")";
-      rateHintText.textContent = "{% trans 'How many' %} " + baseCurrCode
-        + " {% trans 'does 1' %} " + foreignCode + " {% trans 'equal today?' %}";
-      if (!rateInput.value || rateInput.value === "0" || rateInput.value === "1") {
-        rateInput.value = "";
-        rateInput.placeholder = "e.g. 62.00";
+      const vendorBalances = vendorPk ? (vendorPayable[vendorPk] || {}) : {};
+      const bal = vendorBalances[txCurr.code];
+      if (isScenarioA && bal && bal.booking_rate) {
+        rateHintText.textContent =
+          "{% trans 'Invoice was booked at' %} 1 " + foreignCode + " = " + bal.booking_rate.toFixed(4) + " " + baseCurrCode +
+          ". {% trans "Enter today's rate" %} — {% trans 'any difference is recorded as FX Gain/Loss.' %}";
+        if (!rateInput.value || rateInput.value === "0" || rateInput.value === "1") {
+          rateInput.value = bal.booking_rate;
+        }
+      } else {
+        rateHintText.textContent = "{% trans 'How many' %} " + baseCurrCode
+          + " {% trans 'does 1' %} " + foreignCode + " {% trans 'equal today?' %}";
+        if (!rateInput.value || rateInput.value === "0" || rateInput.value === "1") {
+          rateInput.value = "";
+          rateInput.placeholder = "e.g. 62.00";
+        }
       }
       rateInput.required = true;
     } else {

@@ -1,0 +1,615 @@
+{% extends "base.html" %}
+{% load i18n crispy_forms_tags %}
+{% block title %}{% trans "Payment" %}{% endblock %}
+{% block sidebar %}{% include "projects/_sidebar.html" with active="payments" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5><i class="bi bi-arrow-up-circle"></i>
+    {% if form.instance.pk %}{% trans "Edit Payment" %} — {{ form.instance.number }}
+    {% else %}{% trans "New Payment" %}{% endif %}
+  </h5>
+  <a href="{% url 'projects:payment_list' project_pk=project.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> {% trans "Back" %}
+  </a>
+</div>
+
+<div class="row g-3">
+  {# ── Left: form inputs ───────────────────────────────────────────────── #}
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body">
+        <form method="post" id="paymentForm">
+          {% csrf_token %}
+          {# Hidden inputs — values set/kept in sync by JS #}
+          <input type="hidden" name="currency" id="hidden_currency"
+                 value="{{ form.currency.value|default:base_currency_id }}">
+          <input type="hidden" name="exchange_rate" id="hidden_exchange_rate"
+                 value="{{ form.exchange_rate.value|default:'1' }}">
+
+          {# 1. Vendor #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% trans "Vendor" %}</label>
+            {{ form.contact }}
+            {% if form.contact.errors %}<div class="text-danger small mt-1">{{ form.contact.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# 2. Date #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% trans "Date" %}</label>
+            {{ form.date }}
+            {% if form.date.errors %}<div class="text-danger small mt-1">{{ form.date.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# 3. Bill link #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              {% trans "Bill" %}
+              <span class="text-muted fw-normal small ms-1">({% trans "optional" %})</span>
+            </label>
+            {{ form.bill }}
+            {% if form.bill.errors %}<div class="text-danger small mt-1">{{ form.bill.errors.0 }}</div>{% endif %}
+            <div class="form-text">{% trans "Link to a specific bill to track FX gain/loss accurately." %}</div>
+          </div>
+
+          <div id="payment-mode-section" class="mb-3 p-3 bg-light rounded border" style="display:none">
+            <div class="fw-semibold mb-1">{% trans "How would you like to pay?" %}</div>
+            <div class="form-text text-muted mb-2" id="payment-mode-hint"></div>
+            <div class="d-flex gap-4 flex-wrap">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="_pay_mode" id="mode_same" value="same" checked>
+                <label class="form-check-label fw-semibold" for="mode_same" id="mode_same_label">—</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="_pay_mode" id="mode_base" value="base">
+                <label class="form-check-label fw-semibold" for="mode_base" id="mode_base_label">—</label>
+              </div>
+            </div>
+          </div>
+
+          {# 5. Cashbox #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% trans "Pay From (Cashbox)" %}</label>
+            {{ form.cashbox }}
+            {% if form.cashbox.errors %}<div class="text-danger small mt-1">{{ form.cashbox.errors.0 }}</div>{% endif %}
+            <div class="form-text" id="cashbox-hint"></div>
+          </div>
+
+          {# 6. Amount #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              {% trans "Amount" %}
+              <span class="badge bg-secondary ms-1" id="amount-badge">{{ base_currency_code }}</span>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text text-muted" id="amount-sym">{{ base_currency_symbol|default:base_currency_code }}</span>
+              {{ form.amount }}
+            </div>
+            {% if form.amount.errors %}<div class="text-danger small mt-1">{{ form.amount.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# 6b. Bill-currency helper — only shown in "pay in base" mode #}
+          <div id="tc-helper" class="mb-3 p-2 bg-light rounded border" style="display:none">
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <i class="bi bi-calculator text-secondary"></i>
+              <span class="small fw-semibold text-secondary" id="tc-helper-label">{% trans "Or: enter amount to deduct from bill" %}</span>
+            </div>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text" id="tc-helper-sym">—</span>
+              <input type="number" id="tc-helper-input" class="form-control"
+                     step="0.01" min="0" placeholder="0.00">
+              <span class="input-group-text fw-semibold" id="tc-helper-code">—</span>
+            </div>
+            <div class="form-text text-muted mt-1">{% trans "Converted to payment amount at today's rate. Editing the amount above clears this." %}</div>
+          </div>
+          <div id="rate-section" class="mb-3 p-3 border rounded" style="display:none">
+            <label class="form-label fw-semibold mb-0" id="rate-label">{% trans "Exchange Rate" %}</label>
+            <div class="form-text text-muted mb-2" id="rate-description"></div>
+            <div class="input-group">
+              <input type="number" id="rate-input" class="form-control"
+                     step="0.000001" min="0.000001"
+                     placeholder="e.g. 77.000000"
+                     value="{{ form.exchange_rate.value|default:'' }}">
+              <span class="input-group-text fw-semibold" id="rate-unit">—</span>
+            </div>
+            {% if form.exchange_rate.errors %}<div class="text-danger small mt-1">{{ form.exchange_rate.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# 8. Notes #}
+          <div class="mb-3">{{ form.notes|as_crispy_field }}</div>
+
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-save"></i> {% trans "Save Payment" %}
+            </button>
+            <a href="{% url 'projects:payment_list' project_pk=project.pk %}" class="btn btn-outline-secondary">
+              {% trans "Cancel" %}
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {# ── Right: live preview ─────────────────────────────────────────────── #}
+  <div class="col-lg-5">
+
+    {# Bill status card #}
+    <div id="bill-card" class="card mb-3 border-primary" style="display:none">
+      <div class="card-header bg-primary text-white py-2 d-flex align-items-center gap-2">
+        <i class="bi bi-file-earmark-text"></i>
+        <span id="bill-card-title" class="fw-semibold"></span>
+      </div>
+      <div class="card-body py-2">
+        <div class="row g-2 text-center mb-2">
+          <div class="col-4">
+            <div class="text-muted" style="font-size:.75rem">{% trans "Total" %}</div>
+            <div class="fw-semibold small" id="bc-total">—</div>
+          </div>
+          <div class="col-4">
+            <div class="text-muted" style="font-size:.75rem">{% trans "Paid" %}</div>
+            <div class="fw-semibold small text-success" id="bc-paid">—</div>
+          </div>
+          <div class="col-4">
+            <div class="text-muted" style="font-size:.75rem">{% trans "Outstanding" %}</div>
+            <div class="fw-semibold small text-danger" id="bc-balance">—</div>
+          </div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center small">
+          <span class="text-muted">{% trans "Booked at" %}</span>
+          <span id="bc-booking-rate" class="badge bg-light text-dark border"></span>
+        </div>
+      </div>
+    </div>
+
+    {# Payment preview card #}
+    <div id="fx-preview-card" class="card" style="display:none">
+      <div class="card-header bg-warning text-dark py-2 fw-semibold d-flex align-items-center gap-2">
+        <i class="bi bi-calculator"></i> {% trans "Payment Preview" %}
+      </div>
+      <div class="card-body py-2 small">
+
+        {# Mode: same foreign currency #}
+        <div id="preview-same">
+          <div class="d-flex justify-content-between py-1 border-bottom">
+            <span class="text-muted">{% trans "You are paying" %}</span>
+            <span id="prev-amount-tc" class="fw-semibold">—</span>
+          </div>
+          <div class="d-flex justify-content-between py-1 border-bottom">
+            <span class="text-muted">{% trans "Payable reduces by" %} <span class="text-muted fw-normal" title="{% trans 'At original booking rate' %}">({% trans "booking rate" %})</span></span>
+            <span id="prev-payable-bc" class="fw-semibold">—</span>
+          </div>
+          <div class="d-flex justify-content-between py-1 border-bottom">
+            <span class="text-muted">{% trans "Cash leaving cashbox" %}</span>
+            <span id="prev-cashbox-bc" class="fw-semibold">—</span>
+          </div>
+          <div class="d-flex justify-content-between py-1 border-bottom">
+            <span class="text-muted" id="fx-label">{% trans "FX Gain / Loss" %}</span>
+            <span id="prev-fx" class="fw-semibold">—</span>
+          </div>
+          <div class="d-flex justify-content-between py-1">
+            <span class="text-muted">{% trans "Remaining balance" %}</span>
+            <span id="prev-remaining-same" class="fw-semibold">—</span>
+          </div>
+        </div>
+
+        {# Mode: base currency against foreign bill #}
+        <div id="preview-base" style="display:none">
+          <div class="d-flex justify-content-between py-1 border-bottom">
+            <span class="text-muted">{% trans "You are paying" %} ({% trans "base" %})</span>
+            <span id="prev-base-amount" class="fw-semibold">—</span>
+          </div>
+          <div class="d-flex justify-content-between py-1 border-bottom">
+            <span class="text-muted">{% trans "≈ Equivalent in bill currency" %} <span class="text-muted fw-normal">({% trans "at booking rate" %})</span></span>
+            <span id="prev-base-equiv-tc" class="fw-semibold text-primary">—</span>
+          </div>
+          <div class="d-flex justify-content-between py-1">
+            <span class="text-muted">{% trans "Remaining balance" %}</span>
+            <span id="prev-remaining-base" class="fw-semibold">—</span>
+          </div>
+        </div>
+
+        {# Mode: base-currency bill, simple display #}
+        <div id="preview-simple" style="display:none">
+          <div class="d-flex justify-content-between py-1">
+            <span class="text-muted">{% trans "Amount reducing payable" %}</span>
+            <span id="prev-simple-bc" class="fw-semibold">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Tip when no bill selected #}
+    <div id="no-bill-tip" class="alert alert-light border small mt-2">
+      <i class="bi bi-lightbulb text-warning"></i>
+      {% trans "Select a bill above to see a live preview. Linking to a bill lets the system automatically record FX gain/loss when exchange rates have moved." %}
+    </div>
+
+  </div>
+</div>
+
+{# Remove original single-column card wrapper — handled above #}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  /* ── Server-injected data ──────────────────────────────────────────────── */
+  var billsData    = {{ bills_json|safe }};
+  var cbData       = {{ cashboxes_json|safe }};
+  var baseCurrId   = {{ base_currency_id }};
+  var baseCurrCode = "{{ base_currency_code }}";
+  var baseCurrSym  = "{{ base_currency_symbol }}";
+
+  /* ── DOM refs ──────────────────────────────────────────────────────────── */
+  var contactSel  = document.getElementById("id_contact");
+  var billSel     = document.getElementById("id_bill");
+  var cashboxSel  = document.getElementById("id_cashbox");
+  var amountInput = document.getElementById("id_amount");
+  var rateInput   = document.getElementById("rate-input");
+  var hiddenCurr  = document.getElementById("hidden_currency");
+  var hiddenRate  = document.getElementById("hidden_exchange_rate");
+
+  var modeSameRad = document.getElementById("mode_same");
+  var modeBaseRad = document.getElementById("mode_base");
+  var modeSameLbl = document.getElementById("mode_same_label");
+  var modeBaseLbl = document.getElementById("mode_base_label");
+  var modeSection = document.getElementById("payment-mode-section");
+  var modeHint    = document.getElementById("payment-mode-hint");
+
+  var rateSection = document.getElementById("rate-section");
+  var rateLabel   = document.getElementById("rate-label");
+  var rateDesc    = document.getElementById("rate-description");
+  var rateUnit    = document.getElementById("rate-unit");
+
+  var amtBadge    = document.getElementById("amount-badge");
+  var amtSym      = document.getElementById("amount-sym");
+  var cbHint      = document.getElementById("cashbox-hint");
+
+  var tcHelper      = document.getElementById("tc-helper");
+  var tcHelperInput = document.getElementById("tc-helper-input");
+  var tcHelperSym   = document.getElementById("tc-helper-sym");
+  var tcHelperCode  = document.getElementById("tc-helper-code");
+  var _lastRateSeed = null; // "billPk:mode" — tracks when we last seeded the rate field
+
+  var billCard      = document.getElementById("bill-card");
+  var billCardTitle = document.getElementById("bill-card-title");
+  var bcTotal       = document.getElementById("bc-total");
+  var bcPaid        = document.getElementById("bc-paid");
+  var bcBalance     = document.getElementById("bc-balance");
+  var bcBookingRate = document.getElementById("bc-booking-rate");
+
+  var fxCard        = document.getElementById("fx-preview-card");
+  var prevSame      = document.getElementById("preview-same");
+  var prevBase      = document.getElementById("preview-base");
+  var prevSimple    = document.getElementById("preview-simple");
+  var noTip         = document.getElementById("no-bill-tip");
+
+  var prevAmountTc    = document.getElementById("prev-amount-tc");
+  var prevPayableBc   = document.getElementById("prev-payable-bc");
+  var prevCashboxBc   = document.getElementById("prev-cashbox-bc");
+  var fxLabel         = document.getElementById("fx-label");
+  var prevFx          = document.getElementById("prev-fx");
+  var prevRemSame     = document.getElementById("prev-remaining-same");
+  var prevBaseAmt     = document.getElementById("prev-base-amount");
+  var prevBaseEquivTc = document.getElementById("prev-base-equiv-tc");
+  var prevRemBase     = document.getElementById("prev-remaining-base");
+  var prevSimpleBc    = document.getElementById("prev-simple-bc");
+
+  /* ── Helpers ───────────────────────────────────────────────────────────── */
+  function fmt(n, sym) {
+    var s = n.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    return sym ? sym + "\u00a0" + s : s;
+  }
+
+  function selectedBill() {
+    var pk = billSel && billSel.value;
+    return pk ? (billsData[pk] || null) : null;
+  }
+
+  function payMode() {
+    return modeSameRad && modeSameRad.checked ? "same" : "base";
+  }
+
+  function getRate() {
+    return parseFloat(rateInput && rateInput.value) || 0;
+  }
+
+  function getAmount() {
+    return parseFloat(amountInput && amountInput.value) || 0;
+  }
+
+  /* ── Filter bills by contact ───────────────────────────────────────────── */
+  var allBillOpts = billSel
+    ? Array.from(billSel.options).map(function(o) {
+        var b = billsData[o.value];
+        return {value: o.value, text: o.text, contact_id: b ? b.contact_id : null};
+      })
+    : [];
+
+  function filterBills() {
+    if (!billSel) return;
+    var cid = contactSel ? parseInt(contactSel.value) || null : null;
+    var cur = billSel.value;
+    billSel.innerHTML = "";
+    allBillOpts.forEach(function(o) {
+      if (!o.value) { billSel.appendChild(new Option(o.text, "")); return; }
+      if (cid && o.contact_id && o.contact_id !== cid) return;
+      billSel.appendChild(new Option(o.text, o.value));
+    });
+    billSel.value = cur;
+    if (billSel.value !== cur) billSel.value = "";
+  }
+
+  /* ── Filter cashboxes by currency ──────────────────────────────────────── */
+  var allCbOpts = cashboxSel
+    ? Array.from(cashboxSel.options).map(function(o) {
+        var c = cbData[o.value];
+        return {value: o.value, text: o.text, currency_id: c ? c.currency_id : null};
+      })
+    : [];
+
+  function filterCashboxes(targetCurrId) {
+    if (!cashboxSel) return;
+    var cur = cashboxSel.value;
+    cashboxSel.innerHTML = "";
+    allCbOpts.forEach(function(o) {
+      if (!o.value) { cashboxSel.appendChild(new Option(o.text, "")); return; }
+      if (targetCurrId && o.currency_id && o.currency_id !== targetCurrId) return;
+      cashboxSel.appendChild(new Option(o.text, o.value));
+    });
+    cashboxSel.value = cur;
+    if (cashboxSel.value !== cur) cashboxSel.value = "";
+  }
+
+  /* ── Main render ───────────────────────────────────────────────────────── */
+  function update() {
+    var bill         = selectedBill();
+    var isForeign    = bill && (bill.currency_id !== baseCurrId);
+    var mode         = isForeign ? payMode() : "base";
+    var amt          = getAmount();
+    var rate         = getRate();
+
+    /* ── No bill ── */
+    if (!bill) {
+      billCard.style.display    = "none";
+      modeSection.style.display = "none";
+      rateSection.style.display = "none";
+      tcHelper.style.display    = "none";
+      fxCard.style.display      = "none";
+      noTip.style.display       = "";
+      cbHint.textContent        = "";
+      filterCashboxes(null);
+      amtBadge.textContent = baseCurrCode;
+      amtSym.textContent   = baseCurrSym || baseCurrCode;
+      hiddenCurr.value = String(baseCurrId);
+      hiddenRate.value = "1";
+      // still show simple preview if user enters amount
+      if (amt > 0) {
+        prevSimpleBc.textContent = fmt(amt, baseCurrSym) + " " + baseCurrCode;
+        prevSame.style.display   = "none";
+        prevBase.style.display   = "none";
+        prevSimple.style.display = "";
+        fxCard.style.display     = "";
+        noTip.style.display      = "none";
+      }
+      return;
+    }
+
+    /* ── Bill selected ── */
+    noTip.style.display        = "none";
+    billCard.style.display     = "";
+    billCardTitle.textContent  = bill.number;
+    bcTotal.textContent        = fmt(bill.total_tc, bill.currency_symbol) + " " + bill.currency_code;
+    bcPaid.textContent         = fmt(bill.paid_tc, bill.currency_symbol) + " " + bill.currency_code;
+    bcBalance.textContent      = fmt(bill.balance_tc, bill.currency_symbol) + " " + bill.currency_code;
+    bcBookingRate.textContent  = isForeign
+      ? "1\u00a0" + bill.currency_code + "\u00a0=\u00a0" + bill.booking_rate.toFixed(4) + "\u00a0" + baseCurrCode
+      : baseCurrCode + " (base)";
+
+    /* ── Mode selector (only for foreign bills) ── */
+    if (isForeign) {
+      modeSection.style.display = "";
+      modeSameLbl.textContent   = "{% trans 'Pay in' %} " + bill.currency_code + " ({% trans 'same as bill' %})";
+      modeBaseLbl.textContent   = "{% trans 'Pay in' %} " + baseCurrCode + " ({% trans 'base currency' %})";
+      modeHint.textContent      = "{% trans 'Same-currency payment records any FX movement as Gain/Loss.' %}";
+    } else {
+      modeSection.style.display = "none";
+    }
+
+    /* ── TC-helper: visible only when paying base currency against a foreign bill ── */
+    if (mode === "base" && isForeign) {
+      tcHelper.style.display   = "";
+      tcHelperSym.textContent  = bill.currency_symbol || bill.currency_code;
+      tcHelperCode.textContent = bill.currency_code;
+    } else {
+      tcHelper.style.display = "none";
+      tcHelperInput.value    = "";
+    }
+
+    /* ── Cashbox + currency ── */
+    if (mode === "same") {
+      filterCashboxes(bill.currency_id);
+      amtBadge.textContent = bill.currency_code;
+      amtSym.textContent   = bill.currency_symbol || bill.currency_code;
+      cbHint.innerHTML     = "<i class='bi bi-filter'></i> {% trans 'Showing' %} <strong>" +
+                             bill.currency_code + "</strong> {% trans 'cashboxes only.' %}";
+      hiddenCurr.value = String(bill.currency_id);
+    } else {
+      filterCashboxes(baseCurrId);
+      amtBadge.textContent = baseCurrCode;
+      amtSym.textContent   = baseCurrSym || baseCurrCode;
+      cbHint.innerHTML     = "<i class='bi bi-filter'></i> {% trans 'Showing base-currency' %} (" +
+                             baseCurrCode + ") {% trans 'cashboxes only.' %}";
+      hiddenCurr.value = String(baseCurrId);
+    }
+
+    /* ── Rate section ── */
+    if (isForeign) {
+      rateSection.style.display = "";
+      rateUnit.textContent = baseCurrCode + "/" + bill.currency_code;
+      // Only seed the rate value when the bill or mode changes (not on every keystroke)
+      var rateSeedKey = (billSel ? billSel.value : "") + ":" + mode;
+      var shouldSeed  = (rateSeedKey !== _lastRateSeed);
+      if (shouldSeed) { _lastRateSeed = rateSeedKey; }
+      if (mode === "same") {
+        rateLabel.textContent = "{% trans "Today's Exchange Rate" %} — {% trans 'required' %}";
+        rateDesc.innerHTML =
+          "<strong>{% trans 'Current rate' %}:</strong> 1\u00a0" + bill.currency_code +
+          "\u00a0=\u00a0?\u00a0" + baseCurrCode +
+          ". <span class='text-muted'>{% trans 'Bill was booked at' %} " +
+          bill.booking_rate.toFixed(4) + " — {% trans 'any difference becomes FX Gain/Loss.' %}</span>";
+        if (shouldSeed && (!rateInput.value || parseFloat(rateInput.value) <= 0)) {
+          rateInput.value = bill.booking_rate;
+        }
+      } else {
+        rateLabel.textContent = "{% trans "Today's Exchange Rate" %} — {% trans 'required' %}";
+        rateDesc.innerHTML =
+          "<strong>1\u00a0" + bill.currency_code + "\u00a0=\u00a0?\u00a0" + baseCurrCode + "</strong>" +
+          " <span class='text-muted'>{% trans 'Determines how many' %} " + bill.currency_code +
+          " {% trans 'are cleared from this bill.' %}</span>";
+        if (shouldSeed && (!rateInput.value || parseFloat(rateInput.value) <= 0)) {
+          rateInput.value = bill.booking_rate;
+        }
+      }
+      hiddenRate.value = rateInput.value || String(bill.booking_rate);
+    } else {
+      rateSection.style.display = "none";
+      hiddenRate.value = "1";
+      _lastRateSeed = null; // reset so next foreign bill seeds fresh
+    }
+
+    /* ── Preview ── */
+    fxCard.style.display = "";
+
+    if (mode === "same" && isForeign) {
+      prevSame.style.display   = "";
+      prevBase.style.display   = "none";
+      prevSimple.style.display = "none";
+
+      if (rate > 0 && amt > 0) {
+        var payableBC = amt * bill.booking_rate;
+        var cashBC    = amt * rate;
+        var fxDiff    = payableBC - cashBC;
+
+        prevAmountTc.textContent  = fmt(amt, bill.currency_symbol) + "\u00a0" + bill.currency_code;
+        prevPayableBc.textContent = fmt(payableBC, baseCurrSym) + "\u00a0" + baseCurrCode +
+                                    " (@\u00a0" + bill.booking_rate.toFixed(4) + ")";
+        prevCashboxBc.textContent = fmt(cashBC, baseCurrSym) + "\u00a0" + baseCurrCode +
+                                    " (@\u00a0" + rate.toFixed(4) + ")";
+
+        if (Math.abs(fxDiff) < 0.005) {
+          fxLabel.textContent = "{% trans 'FX Gain/Loss' %}";
+          prevFx.textContent  = "{% trans 'No FX difference (same rate)' %}";
+          prevFx.className    = "fw-semibold text-muted";
+        } else if (fxDiff > 0) {
+          fxLabel.textContent = "{% trans 'FX Gain' %} \u2197";
+          prevFx.textContent  = "\u2191 " + fmt(fxDiff, baseCurrSym) + "\u00a0" + baseCurrCode;
+          prevFx.className    = "fw-semibold text-success";
+        } else {
+          fxLabel.textContent = "{% trans 'FX Loss' %} \u2198";
+          prevFx.textContent  = "\u2193 " + fmt(-fxDiff, baseCurrSym) + "\u00a0" + baseCurrCode;
+          prevFx.className    = "fw-semibold text-danger";
+        }
+
+        var rem = bill.balance_tc - amt;
+        prevRemSame.textContent = fmt(Math.max(rem, 0), bill.currency_symbol) + "\u00a0" + bill.currency_code;
+        prevRemSame.className   = "fw-semibold " + (rem > 0.005 ? "text-warning" : "text-success");
+
+      } else {
+        [prevAmountTc, prevPayableBc, prevCashboxBc, prevFx].forEach(function(el) { el.textContent = "—"; });
+        prevFx.className         = "fw-semibold";
+        fxLabel.textContent      = "{% trans 'FX Gain/Loss' %}";
+        prevRemSame.textContent  = fmt(bill.balance_tc, bill.currency_symbol) + "\u00a0" + bill.currency_code;
+        prevRemSame.className    = "fw-semibold text-warning";
+      }
+
+    } else if (isForeign) {
+      /* mode === "base" — paying base currency against foreign bill */
+      prevSame.style.display   = "none";
+      prevBase.style.display   = "";
+      prevSimple.style.display = "none";
+
+      if (amt > 0 && rate > 0) {
+        var equivTc  = amt / rate;                      // USD cleared at today's rate
+        var rem      = bill.balance_tc - equivTc;
+        prevBaseAmt.textContent     = fmt(amt, baseCurrSym) + "\u00a0" + baseCurrCode;
+        prevBaseEquivTc.textContent =
+          "\u2248\u00a0" + fmt(equivTc, bill.currency_symbol) + "\u00a0" + bill.currency_code +
+          " (@\u00a0" + rate.toFixed(4) + ")";
+        prevRemBase.textContent     = fmt(Math.max(rem, 0), bill.currency_symbol) + "\u00a0" + bill.currency_code;
+        prevRemBase.className       = "fw-semibold " + (rem > 0.005 ? "text-warning" : "text-success");
+      } else {
+        prevBaseAmt.textContent     = "—";
+        prevBaseEquivTc.textContent = amt > 0 ? "{% trans 'Enter exchange rate above' %}" : "—";
+        prevRemBase.textContent     = fmt(bill.balance_tc, bill.currency_symbol) + "\u00a0" + bill.currency_code;
+        prevRemBase.className       = "fw-semibold text-warning";
+      }
+
+    } else {
+      /* base-currency bill */
+      prevSame.style.display   = "none";
+      prevBase.style.display   = "none";
+      prevSimple.style.display = "";
+      prevSimpleBc.textContent = amt > 0
+        ? fmt(amt, baseCurrSym) + "\u00a0" + baseCurrCode
+        : "—";
+    }
+  }
+
+  /* ── Sync hidden rate from input ───────────────────────────────────────── */
+  function syncRate() {
+    if (rateSection.style.display !== "none" && rateInput.value) {
+      hiddenRate.value = rateInput.value;
+      // If tc-helper has a value, recompute amount when rate changes
+      var tcVal = parseFloat(tcHelperInput && tcHelperInput.value) || 0;
+      var rate  = getRate();
+      if (tcVal > 0 && rate > 0) {
+        amountInput.value = (tcVal * rate).toFixed(2);
+      }
+    }
+    update();
+  }
+
+  /* ── Event wiring ──────────────────────────────────────────────────────── */
+  if (contactSel)  contactSel.addEventListener("change", function() { filterBills(); update(); });
+  if (billSel)     billSel.addEventListener("change", update);
+  if (cashboxSel)  cashboxSel.addEventListener("change", update);
+  if (amountInput) amountInput.addEventListener("input", function() {
+    // User typed in amount manually → clear tc-helper to avoid confusion
+    if (tcHelperInput) tcHelperInput.value = "";
+    update();
+  });
+  if (rateInput)   rateInput.addEventListener("input", syncRate);
+  if (modeSameRad) modeSameRad.addEventListener("change", update);
+  if (modeBaseRad) modeBaseRad.addEventListener("change", update);
+
+  /* tc-helper: user enters bill-currency amount → convert to payment amount */
+  if (tcHelperInput) {
+    tcHelperInput.addEventListener("input", function() {
+      var tcVal = parseFloat(tcHelperInput.value) || 0;
+      var rate  = getRate();
+      if (tcVal > 0 && rate > 0) {
+        amountInput.value = (tcVal * rate).toFixed(2);
+      } else {
+        amountInput.value = "";
+      }
+      update();
+    });
+  }
+
+  /* Ensure hidden fields are committed on submit */
+  var payForm = document.getElementById("paymentForm");
+  if (payForm) {
+    payForm.addEventListener("submit", function() {
+      if (rateSection.style.display !== "none") {
+        hiddenRate.value = rateInput.value || "1";
+      }
+    });
+  }
+
+  filterBills();
+  update();
+})();
+</script>
+{% endblock %}

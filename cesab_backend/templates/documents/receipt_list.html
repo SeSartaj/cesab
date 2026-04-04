@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load i18n humanize %}
+{% block title %}{% trans "Receipts" %}{% endblock %}
+{% block sidebar %}{% include "projects/_sidebar.html" with active="receipts" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5><i class="bi bi-arrow-down-circle"></i> {% trans "Receipts" %} — {{ project.name }}</h5>
+  {% if can_add_financial %}
+  <a href="{% url 'projects:receipt_create' project_pk=project.pk %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-circle"></i> {% trans "New Receipt" %}
+  </a>
+  {% endif %}
+</div>
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>{% trans "Number" %}</th>
+          <th>{% trans "Customer" %}</th>
+          <th>{% trans "Date" %}</th>
+          <th>{% trans "Currency" %}</th>
+          <th class="text-end">{% trans "Amount" %}</th>
+          <th>{% trans "Cashbox" %}</th>
+          <th>{% trans "Status" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rec in receipts %}
+        <tr>
+          <td><a href="{% url 'projects:receipt_detail' project_pk=project.pk pk=rec.pk %}">{{ rec.number }}</a></td>
+          <td>{{ rec.contact.name }}</td>
+          <td>{{ rec.date }}</td>
+          <td>{{ rec.currency.code }}</td>
+          <td class="text-end">{{ rec.amount|floatformat:2|intcomma }}</td>
+          <td>{{ rec.cashbox.name }}</td>
+          <td>
+            {% if rec.status == "posted" %}<span class="badge bg-success">{% trans "Posted" %}</span>
+            {% else %}<span class="badge bg-secondary">{% trans "Draft" %}</span>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center text-muted py-3">{% trans "No receipts yet." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

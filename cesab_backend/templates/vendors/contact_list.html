@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Contacts" %}{% endblock %}
+{% block sidebar %}{% include "projects/_sidebar.html" with active="vendors" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5><i class="bi bi-people"></i> {% trans "Contacts" %} — {{ project.name }}</h5>
+  {% if can_add_financial %}
+  <a href="{% url 'projects:add_contact' project_pk=project.pk %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-circle"></i> {% trans "New Contact" %}
+  </a>
+  {% endif %}
+</div>
+
+{# Search and filter bar #}
+<form method="get" class="mb-3">
+  {% if type_filter %}<input type="hidden" name="type" value="{{ type_filter }}">{% endif %}
+  {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+  <div class="input-group input-group-sm" style="max-width: 360px;">
+    <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="{% trans "Search contacts…" %}">
+    <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
+    {% if q %}
+    <a href="?{% if type_filter %}type={{ type_filter }}&{% endif %}{% if sort %}sort={{ sort }}{% endif %}" class="btn btn-outline-danger"><i class="bi bi-x"></i></a>
+    {% endif %}
+  </div>
+</form>
+
+{# Type filter tabs #}
+<ul class="nav nav-pills mb-3">
+  <li class="nav-item">
+    <a class="nav-link {% if not type_filter %}active{% endif %}"
+       href="?{% if q %}q={{ q }}&{% endif %}{% if sort %}sort={{ sort }}{% endif %}">
+      {% trans "All" %}
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if type_filter == 'vendor' %}active{% endif %}"
+       href="?type=vendor{% if q %}&q={{ q }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+      {% trans "Vendors" %}
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if type_filter == 'customer' %}active{% endif %}"
+       href="?type=customer{% if q %}&q={{ q }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+      {% trans "Customers" %}
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if type_filter == 'both' %}active{% endif %}"
+       href="?type=both{% if q %}&q={{ q }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+      {% trans "Vendor & Customer" %}
+    </a>
+  </li>
+</ul>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>{% trans "Name" %}</th>
+          <th>{% trans "Type" %}</th>
+          <th>{% trans "Phone" %}</th>
+          <th class="text-end">
+            {% if sort == "payable" %}
+              <a href="?{% if q %}q={{ q }}&{% endif %}{% if type_filter %}type={{ type_filter }}&{% endif %}sort=-payable" class="text-decoration-none text-dark">
+                {% trans "Payable" %} <i class="bi bi-sort-down"></i>
+              </a>
+            {% elif sort == "-payable" %}
+              <a href="?{% if q %}q={{ q }}&{% endif %}{% if type_filter %}type={{ type_filter }}&{% endif %}sort=payable" class="text-decoration-none text-dark">
+                {% trans "Payable" %} <i class="bi bi-sort-up"></i>
+              </a>
+            {% else %}
+              <a href="?{% if q %}q={{ q }}&{% endif %}{% if type_filter %}type={{ type_filter }}&{% endif %}sort=payable" class="text-decoration-none text-secondary">
+                {% trans "Payable" %} <i class="bi bi-arrow-down-up"></i>
+              </a>
+            {% endif %}
+          </th>
+          <th class="text-end">
+            {% if sort == "receivable" %}
+              <a href="?{% if q %}q={{ q }}&{% endif %}{% if type_filter %}type={{ type_filter }}&{% endif %}sort=-receivable" class="text-decoration-none text-dark">
+                {% trans "Receivable" %} <i class="bi bi-sort-down"></i>
+              </a>
+            {% elif sort == "-receivable" %}
+              <a href="?{% if q %}q={{ q }}&{% endif %}{% if type_filter %}type={{ type_filter }}&{% endif %}sort=receivable" class="text-decoration-none text-dark">
+                {% trans "Receivable" %} <i class="bi bi-sort-up"></i>
+              </a>
+            {% else %}
+              <a href="?{% if q %}q={{ q }}&{% endif %}{% if type_filter %}type={{ type_filter }}&{% endif %}sort=receivable" class="text-decoration-none text-secondary">
+                {% trans "Receivable" %} <i class="bi bi-arrow-down-up"></i>
+              </a>
+            {% endif %}
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in contacts %}
+        <tr>
+          <td>
+            <a href="{% url 'projects:contact_detail' project_pk=project.pk pk=c.pk %}">{{ c.name }}</a>
+          </td>
+          <td>
+            {% if c.contact_type == 'vendor' %}
+              <span class="badge bg-secondary">{% trans "Vendor" %}</span>
+            {% elif c.contact_type == 'customer' %}
+              <span class="badge bg-info text-dark">{% trans "Customer" %}</span>
+            {% else %}
+              <span class="badge bg-primary">{% trans "V & C" %}</span>
+            {% endif %}
+          </td>
+          <td>{{ c.phone|default:"-" }}</td>
+          <td class="text-end {% if c.balance_payable > 0 %}text-danger{% endif %}">
+            {% if c.is_vendor %}{{ c.balance_payable|floatformat:2 }}{% else %}-{% endif %}
+          </td>
+          <td class="text-end {% if c.balance_receivable > 0 %}text-success{% endif %}">
+            {% if c.is_customer %}{{ c.balance_receivable|floatformat:2 }}{% else %}-{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-4">{% trans "No contacts found." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

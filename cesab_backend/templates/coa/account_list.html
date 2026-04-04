@@ -10,8 +10,14 @@
 
 {% for type_code, type_label in account_types %}
 <div class="card mb-3">
-  <div class="card-header py-2">
+  <div class="card-header py-2 d-flex justify-content-between align-items-center">
     <strong>{{ type_label }}</strong>
+    {% if can_add_financial %}
+    <a href="{% url 'projects:account_create' project_pk=project.pk %}?type={{ type_code }}"
+       class="btn btn-sm btn-outline-light py-0">
+      <i class="bi bi-plus-lg"></i> {% trans "Add" %}
+    </a>
+    {% endif %}
   </div>
   <div class="card-body p-0">
     <table class="table table-sm mb-0">
@@ -20,6 +26,7 @@
           <th>{% trans "Code" %}</th>
           <th>{% trans "Name" %}</th>
           <th class="text-end">{% trans "Balance" %}</th>
+          {% if can_add_financial %}<th></th>{% endif %}
         </tr>
       </thead>
       <tbody>
@@ -27,10 +34,18 @@
         {% if acc.account_type == type_code %}
         <tr>
           <td class="text-muted small">{{ acc.code }}</td>
-          <td>{{ acc.name }}</td>
+          <td>
+            {{ acc.name }}
+            {% if acc.is_tax_account %}<span class="badge bg-info text-dark ms-1" style="font-size:.7em;">{% trans "Tax" %}</span>{% endif %}
+          </td>
           <td class="text-end fw-semibold {% if acc.balance >= 0 %}text-dark{% else %}text-danger{% endif %}">
             {{ acc.balance|floatformat:2 }}
           </td>
+          {% if can_add_financial %}
+          <td class="text-end">
+            <a href="{% url 'projects:account_edit' project_pk=project.pk pk=acc.pk %}" class="btn btn-outline-secondary btn-sm py-0 px-1"><i class="bi bi-pencil"></i></a>
+          </td>
+          {% endif %}
         </tr>
         {% endif %}
         {% endfor %}

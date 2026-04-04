@@ -1,4 +1,5 @@
 """Chart of Accounts services - business logic for account management."""
+from decimal import Decimal
 from .models import Account
 
 STANDARD_COA = [
@@ -9,10 +10,12 @@ STANDARD_COA = [
     {"code": "1400", "name": "Fixed Assets", "type": "asset", "parent_code": "1000"},
     {"code": "1500", "name": "Inventory", "type": "asset", "parent_code": "1000"},
     {"code": "1600", "name": "Other Assets", "type": "asset", "parent_code": "1000"},
+    {"code": "1700", "name": "Tax Receivable", "type": "asset", "parent_code": "1000", "is_tax_account": True},
     {"code": "2000", "name": "Liabilities", "type": "liability", "parent_code": None},
     {"code": "2100", "name": "Accounts Payable", "type": "liability", "parent_code": "2000"},
     {"code": "2200", "name": "Salaries Payable", "type": "liability", "parent_code": "2000"},
     {"code": "2300", "name": "Other Liabilities", "type": "liability", "parent_code": "2000"},
+    {"code": "2400", "name": "Tax Payable", "type": "liability", "parent_code": "2000", "is_tax_account": True},
     {"code": "3000", "name": "Equity", "type": "equity", "parent_code": None},
     {"code": "3100", "name": "Partner Capital", "type": "equity", "parent_code": "3000"},
     {"code": "3200", "name": "Partner Current Accounts", "type": "equity", "parent_code": "3000"},
@@ -42,9 +45,43 @@ def create_standard_coa(project):
             account_type=entry["type"],
             parent=parent,
             is_system=True,
+            is_tax_account=entry.get("is_tax_account", False),
         )
         accounts[entry["code"]] = account
+    create_standard_taxes(project, accounts)
     return accounts
+
+
+STANDARD_TAXES = [
+    ("VAT 10%", Decimal("0.1000")),
+    ("VAT 5%",  Decimal("0.0500")),
+    ("WHT 5%",  Decimal("0.0500")),
+    ("WHT 2%",  Decimal("0.0200")),
+]
+
+
+def create_standard_taxes(project, accounts=None):
+    """Create default tax configurations for a project.
+
+    *accounts* is the dict returned by create_standard_coa; if omitted the
+    function looks up the Tax Payable account from the database.
+    """
+    from documents.models import Tax  # avoid circular import at module level
+
+    if accounts is not None:
+        tax_account = accounts.get("2400")
+    else:
+        tax_account = Account.objects.filter(project=project, code="2400").first()
+
+    if tax_account is None:
+        return
+
+    for name, rate in STANDARD_TAXES:
+        Tax.objects.get_or_create(
+            project=project,
+            name=name,
+            defaults={"rate": rate, "account": tax_account},
+        )
 
 
 def get_or_create_fx_accounts(project):
@@ -113,29 +150,52 @@ def create_partner_accounts(project, name):
     return capital_account, current_account
 
 
-def create_vendor_accounts(project, vendor):
-    """Create payable and advance accounts for a new vendor."""
-    idx = project.vendors.count() + 1
-    pay_code = _next_code(project, "21", idx)
-    adv_code = _next_code(project, "13", idx)
+def create_contact_accounts(project, contact):
+    """Create ledger accounts for a Contact based on its contact_type.
 
-    payable_account = Account.objects.create(
-        project=project,
-        code=pay_code,
-        name=f"{vendor.name} - Payable",
-        account_type="liability",
-        parent=Account.objects.filter(project=project, code="2100").first(),
-        is_system=True,
-    )
-    advance_account = Account.objects.create(
-        project=project,
-        code=adv_code,
-        name=f"{vendor.name} - Advance",
-        account_type="asset",
-        parent=Account.objects.filter(project=project, code="1300").first(),
-        is_system=True,
-    )
-    return payable_account, advance_account
+    Vendor accounts: Payable (2100.*) + Advance (1300.*)
+    Customer accounts: Receivable (1200.*)
+    Both: all three.
+    """
+    from vendors.models import Contact as ContactModel
+    idx = project.contacts.count() + 1
+
+    if contact.contact_type in (ContactModel.VENDOR, ContactModel.BOTH):
+        pay_code = _next_code(project, "21", idx)
+        adv_code = _next_code(project, "13", idx)
+        contact.payable_account = Account.objects.create(
+            project=project,
+            code=pay_code,
+            name=f"{contact.name} - Payable",
+            account_type="liability",
+            parent=Account.objects.filter(project=project, code="2100").first(),
+            is_system=True,
+        )
+        contact.advance_account = Account.objects.create(
+            project=project,
+            code=adv_code,
+            name=f"{contact.name} - Advance",
+            account_type="asset",
+            parent=Account.objects.filter(project=project, code="1300").first(),
+            is_system=True,
+        )
+
+    if contact.contact_type in (ContactModel.CUSTOMER, ContactModel.BOTH):
+        rec_code = _next_code(project, "12", idx)
+        contact.receivable_account = Account.objects.create(
+            project=project,
+            code=rec_code,
+            name=f"{contact.name} - Receivable",
+            account_type="asset",
+            parent=Account.objects.filter(project=project, code="1200").first(),
+            is_system=True,
+        )
+
+
+def create_vendor_accounts(project, vendor):
+    """Backward-compat wrapper — delegates to create_contact_accounts."""
+    create_contact_accounts(project, vendor)
+    return vendor.payable_account, vendor.advance_account
 
 
 def create_employee_accounts(project, employee):

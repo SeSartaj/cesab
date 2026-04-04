@@ -16,10 +16,11 @@ urlpatterns = [
     # Sub-resources
     path("<int:project_pk>/shareholders/", include("partners.urls")),
     path("<int:project_pk>/cashboxes/", include("cash.urls")),
-    path("<int:project_pk>/vendors/", include("vendors.urls")),
+    path("<int:project_pk>/contacts/", include("vendors.urls")),
     path("<int:project_pk>/employees/", include("employees.urls")),
     path("<int:project_pk>/journal/", include("journal.urls")),
     path("<int:project_pk>/transactions/", include("transactions.urls")),
     path("<int:project_pk>/coa/", include("coa.urls")),
     path("<int:project_pk>/inventory/", include("inventory.urls")),
+    path("<int:project_pk>/documents/", include("documents.urls")),
 ]

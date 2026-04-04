@@ -1,0 +1,30 @@
+{% load i18n crispy_forms_tags %}
+
+<div class="{{ currency_col|default:'col-md-3' }}" id="currency-field">
+  {{ form.currency|as_crispy_field }}
+</div>
+<div class="{{ rate_col|default:'col-md-3' }}" id="exchange-rate-field">
+  {{ form.exchange_rate|as_crispy_field }}
+</div>
+<script>
+(function () {
+  var BASE_ID = "{{ project.base_currency.pk }}";
+  var currSel = document.getElementById("id_currency");
+  var xrField = document.getElementById("exchange-rate-field");
+
+  function toggleRate() {
+    if (!currSel || !xrField) return;
+    var isBase = currSel.value === BASE_ID;
+    xrField.style.display = isBase ? "none" : "";
+    if (isBase) {
+      var inp = document.getElementById("id_exchange_rate");
+      if (inp) inp.value = "1";
+    }
+  }
+
+  if (currSel) {
+    currSel.addEventListener("change", toggleRate);
+    toggleRate();
+  }
+})();
+</script>

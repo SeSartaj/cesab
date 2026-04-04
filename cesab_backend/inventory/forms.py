@@ -4,7 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from core.models import Currency
 from cash.models import Cashbox
 from partners.models import ProjectPartner
-from vendors.models import Vendor
+from vendors.models import Contact
 from .models import InventoryItem
 
 
@@ -60,7 +60,7 @@ class InventoryPurchaseForm(forms.Form):
         label=_("Payment Method"),
     )
     vendor = forms.ModelChoiceField(
-        queryset=Vendor.objects.none(),
+        queryset=Contact.objects.none(),
         required=False,
         widget=forms.Select(attrs={"class": "form-select"}),
         label=_("Vendor"),
@@ -87,7 +87,7 @@ class InventoryPurchaseForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.fields["item"].queryset = InventoryItem.objects.filter(project=project, is_active=True)
         self.fields["cashbox"].queryset = Cashbox.objects.filter(project=project, is_active=True)
-        self.fields["vendor"].queryset = Vendor.objects.filter(project=project, is_active=True)
+        self.fields["vendor"].queryset = Contact.objects.filter(project=project, is_active=True)
         # Pre-select base currency
         self.fields["currency"].initial = project.base_currency
 

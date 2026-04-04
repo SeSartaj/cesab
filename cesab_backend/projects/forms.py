@@ -10,12 +10,16 @@ User = get_user_model()
 class ProjectForm(forms.ModelForm):
     class Meta:
         model = Project
-        fields = ["name", "base_currency", "description", "start_date"]
+        fields = ["name", "base_currency", "description", "start_date",
+                  "print_heading", "print_subheading", "print_logo"]
         widgets = {
             "name": forms.TextInput(attrs={"class": "form-control"}),
             "base_currency": forms.Select(attrs={"class": "form-select"}),
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
             "start_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "print_heading": forms.TextInput(attrs={"class": "form-control"}),
+            "print_subheading": forms.TextInput(attrs={"class": "form-control"}),
+            "print_logo": forms.ClearableFileInput(attrs={"class": "form-control"}),
         }
 
     def __init__(self, *args, **kwargs):

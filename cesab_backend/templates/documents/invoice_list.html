@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load i18n humanize %}
+{% block title %}{% trans "Customer Invoices" %}{% endblock %}
+{% block sidebar %}{% include "projects/_sidebar.html" with active="invoices" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5><i class="bi bi-file-earmark-text"></i> {% trans "Customer Invoices" %} — {{ project.name }}</h5>
+  {% if can_add_financial %}
+  <a href="{% url 'projects:invoice_create' project_pk=project.pk %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-circle"></i> {% trans "New Invoice" %}
+  </a>
+  {% endif %}
+</div>
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th>{% trans "Number" %}</th>
+          <th>{% trans "Customer" %}</th>
+          <th>{% trans "Date" %}</th>
+          <th>{% trans "Due" %}</th>
+          <th class="text-end">{% trans "Total" %}</th>
+          <th class="text-end">{% trans "Received (BC)" %}</th>
+          <th class="text-end">{% trans "Outstanding (BC)" %}</th>
+          <th>{% trans "Status" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inv in invoices %}
+        {% with received=inv.received_bc balance=inv.balance_bc %}
+        <tr class="{% if inv.is_overdue %}table-warning{% endif %}">
+          <td><a href="{% url 'projects:invoice_detail' project_pk=project.pk pk=inv.pk %}">{{ inv.number }}</a></td>
+          <td>{{ inv.contact.name }}</td>
+          <td class="text-nowrap text-muted">{{ inv.date }}</td>
+          <td class="text-nowrap">
+            {% if inv.due_date %}
+              {{ inv.due_date }}
+              {% if inv.is_overdue %}
+                <span class="badge bg-warning text-dark ms-1">{% trans "Overdue" %}</span>
+              {% endif %}
+            {% else %}-{% endif %}
+          </td>
+          <td class="text-end fw-semibold">{{ inv.total_amount|floatformat:2|intcomma }} <span class="text-muted">{{ inv.currency.code }}</span></td>
+          <td class="text-end text-success">{% if received %}{{ received|floatformat:2|intcomma }} <span class="text-muted">{{ project.base_currency.code }}</span>{% else %}-{% endif %}</td>
+          <td class="text-end {% if balance > 0 %}text-warning fw-semibold{% else %}text-success{% endif %}">
+            {{ balance|floatformat:2|intcomma }} <span class="text-muted">{{ project.base_currency.code }}</span>
+          </td>
+          <td>
+            {% if inv.status == "posted" %}<span class="badge bg-success">{% trans "Posted" %}</span>
+            {% else %}<span class="badge bg-secondary">{% trans "Draft" %}</span>{% endif %}
+            {% if inv.is_reversed %}<span class="badge bg-warning text-dark">{% trans "Reversed" %}</span>{% endif %}
+          </td>
+        </tr>
+        {% endwith %}
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-3">{% trans "No invoices yet." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
