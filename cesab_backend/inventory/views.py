@@ -27,9 +27,16 @@ def _require_perm(request, project):
 def item_list(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
     items = InventoryItem.objects.filter(project=project, is_active=True)
+    recent_movements = (
+        InventoryMovement.objects
+        .filter(project=project)
+        .select_related("item", "contact", "vendor_bill")
+        .order_by("-created_at")[:20]
+    )
     return render(request, "inventory/item_list.html", {
         "project": project,
         "items": items,
+        "recent_movements": recent_movements,
         "title": _("Inventory"),
         "can_add_financial": can_access_financial(request.user, project),
     })
@@ -96,7 +103,7 @@ def inventory_purchase(request, project_pk):
             exchange_rate = d.get("exchange_rate") or 1
             try:
                 if d["payment_method"] == "vendor_bill":
-                    svc.record_inventory_purchase_on_credit(
+                    bill = svc.record_inventory_purchase_on_credit(
                         project=project, user=request.user,
                         date=d["date"], item=d["item"],
                         quantity=d["quantity"], unit_cost=d["unit_cost"],
@@ -104,6 +111,16 @@ def inventory_purchase(request, project_pk):
                         description=d.get("description", ""),
                         currency=currency, exchange_rate=exchange_rate,
                     )
+                    messages.success(
+                        request,
+                        _("Inventory purchase recorded and bill %(num)s created for %(vendor)s.") % {
+                            "num": bill.number, "vendor": bill.contact.name,
+                        },
+                    )
+                    return redirect(reverse(
+                        "projects:bill_detail",
+                        kwargs={"project_pk": project_pk, "pk": bill.pk},
+                    ))
                 elif d["payment_method"] == "vendor_cash":
                     svc.record_inventory_purchase_cash_to_vendor(
                         project=project, user=request.user,

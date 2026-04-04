@@ -52,6 +52,7 @@
             <div class="form-text">{% trans "Link to a specific bill to track FX gain/loss accurately." %}</div>
           </div>
 
+          {# 4. Payment mode — visible only for foreign-currency bills #}
           <div id="payment-mode-section" class="mb-3 p-3 bg-light rounded border" style="display:none">
             <div class="fw-semibold mb-1">{% trans "How would you like to pay?" %}</div>
             <div class="form-text text-muted mb-2" id="payment-mode-hint"></div>
@@ -88,20 +89,7 @@
             {% if form.amount.errors %}<div class="text-danger small mt-1">{{ form.amount.errors.0 }}</div>{% endif %}
           </div>
 
-          {# 6b. Bill-currency helper — only shown in "pay in base" mode #}
-          <div id="tc-helper" class="mb-3 p-2 bg-light rounded border" style="display:none">
-            <div class="d-flex align-items-center gap-2 mb-1">
-              <i class="bi bi-calculator text-secondary"></i>
-              <span class="small fw-semibold text-secondary" id="tc-helper-label">{% trans "Or: enter amount to deduct from bill" %}</span>
-            </div>
-            <div class="input-group input-group-sm">
-              <span class="input-group-text" id="tc-helper-sym">—</span>
-              <input type="number" id="tc-helper-input" class="form-control"
-                     step="0.01" min="0" placeholder="0.00">
-              <span class="input-group-text fw-semibold" id="tc-helper-code">—</span>
-            </div>
-            <div class="form-text text-muted mt-1">{% trans "Converted to payment amount at today's rate. Editing the amount above clears this." %}</div>
-          </div>
+          {# 7. Exchange rate — shown for foreign scenarios #}
           <div id="rate-section" class="mb-3 p-3 border rounded" style="display:none">
             <label class="form-label fw-semibold mb-0" id="rate-label">{% trans "Exchange Rate" %}</label>
             <div class="form-text text-muted mb-2" id="rate-description"></div>
@@ -266,12 +254,6 @@
   var amtSym      = document.getElementById("amount-sym");
   var cbHint      = document.getElementById("cashbox-hint");
 
-  var tcHelper      = document.getElementById("tc-helper");
-  var tcHelperInput = document.getElementById("tc-helper-input");
-  var tcHelperSym   = document.getElementById("tc-helper-sym");
-  var tcHelperCode  = document.getElementById("tc-helper-code");
-  var _lastRateSeed = null; // "billPk:mode" — tracks when we last seeded the rate field
-
   var billCard      = document.getElementById("bill-card");
   var billCardTitle = document.getElementById("bill-card-title");
   var bcTotal       = document.getElementById("bc-total");
@@ -375,7 +357,6 @@
       billCard.style.display    = "none";
       modeSection.style.display = "none";
       rateSection.style.display = "none";
-      tcHelper.style.display    = "none";
       fxCard.style.display      = "none";
       noTip.style.display       = "";
       cbHint.textContent        = "";
@@ -417,16 +398,6 @@
       modeSection.style.display = "none";
     }
 
-    /* ── TC-helper: visible only when paying base currency against a foreign bill ── */
-    if (mode === "base" && isForeign) {
-      tcHelper.style.display   = "";
-      tcHelperSym.textContent  = bill.currency_symbol || bill.currency_code;
-      tcHelperCode.textContent = bill.currency_code;
-    } else {
-      tcHelper.style.display = "none";
-      tcHelperInput.value    = "";
-    }
-
     /* ── Cashbox + currency ── */
     if (mode === "same") {
       filterCashboxes(bill.currency_id);
@@ -445,38 +416,22 @@
     }
 
     /* ── Rate section ── */
-    if (isForeign) {
+    if (mode === "same" && isForeign) {
       rateSection.style.display = "";
+      rateLabel.textContent     = "{% trans "Today's Exchange Rate" %} — {% trans 'required' %}";
+      rateDesc.innerHTML        =
+        "<strong>{% trans 'Current rate' %}:</strong> 1\u00a0" + bill.currency_code +
+        "\u00a0=\u00a0?\u00a0" + baseCurrCode +
+        ". <span class='text-muted'>{% trans 'Bill was booked at' %} " +
+        bill.booking_rate.toFixed(4) + " — {% trans 'any difference becomes FX Gain/Loss.' %}</span>";
       rateUnit.textContent = baseCurrCode + "/" + bill.currency_code;
-      // Only seed the rate value when the bill or mode changes (not on every keystroke)
-      var rateSeedKey = (billSel ? billSel.value : "") + ":" + mode;
-      var shouldSeed  = (rateSeedKey !== _lastRateSeed);
-      if (shouldSeed) { _lastRateSeed = rateSeedKey; }
-      if (mode === "same") {
-        rateLabel.textContent = "{% trans "Today's Exchange Rate" %} — {% trans 'required' %}";
-        rateDesc.innerHTML =
-          "<strong>{% trans 'Current rate' %}:</strong> 1\u00a0" + bill.currency_code +
-          "\u00a0=\u00a0?\u00a0" + baseCurrCode +
-          ". <span class='text-muted'>{% trans 'Bill was booked at' %} " +
-          bill.booking_rate.toFixed(4) + " — {% trans 'any difference becomes FX Gain/Loss.' %}</span>";
-        if (shouldSeed && (!rateInput.value || parseFloat(rateInput.value) <= 0)) {
-          rateInput.value = bill.booking_rate;
-        }
-      } else {
-        rateLabel.textContent = "{% trans "Today's Exchange Rate" %} — {% trans 'required' %}";
-        rateDesc.innerHTML =
-          "<strong>1\u00a0" + bill.currency_code + "\u00a0=\u00a0?\u00a0" + baseCurrCode + "</strong>" +
-          " <span class='text-muted'>{% trans 'Determines how many' %} " + bill.currency_code +
-          " {% trans 'are cleared from this bill.' %}</span>";
-        if (shouldSeed && (!rateInput.value || parseFloat(rateInput.value) <= 0)) {
-          rateInput.value = bill.booking_rate;
-        }
+      if (!rateInput.value || parseFloat(rateInput.value) <= 0) {
+        rateInput.value = bill.booking_rate.toFixed(6);
       }
       hiddenRate.value = rateInput.value || String(bill.booking_rate);
     } else {
       rateSection.style.display = "none";
       hiddenRate.value = "1";
-      _lastRateSeed = null; // reset so next foreign bill seeds fresh
     }
 
     /* ── Preview ── */
@@ -530,18 +485,18 @@
       prevBase.style.display   = "";
       prevSimple.style.display = "none";
 
-      if (amt > 0 && rate > 0) {
-        var equivTc  = amt / rate;                      // USD cleared at today's rate
+      if (amt > 0 && bill.booking_rate > 0) {
+        var equivTc  = amt / bill.booking_rate;
         var rem      = bill.balance_tc - equivTc;
         prevBaseAmt.textContent     = fmt(amt, baseCurrSym) + "\u00a0" + baseCurrCode;
         prevBaseEquivTc.textContent =
           "\u2248\u00a0" + fmt(equivTc, bill.currency_symbol) + "\u00a0" + bill.currency_code +
-          " (@\u00a0" + rate.toFixed(4) + ")";
+          " (@\u00a0" + bill.booking_rate.toFixed(4) + ")";
         prevRemBase.textContent     = fmt(Math.max(rem, 0), bill.currency_symbol) + "\u00a0" + bill.currency_code;
         prevRemBase.className       = "fw-semibold " + (rem > 0.005 ? "text-warning" : "text-success");
       } else {
         prevBaseAmt.textContent     = "—";
-        prevBaseEquivTc.textContent = amt > 0 ? "{% trans 'Enter exchange rate above' %}" : "—";
+        prevBaseEquivTc.textContent = "—";
         prevRemBase.textContent     = fmt(bill.balance_tc, bill.currency_symbol) + "\u00a0" + bill.currency_code;
         prevRemBase.className       = "fw-semibold text-warning";
       }
@@ -561,12 +516,6 @@
   function syncRate() {
     if (rateSection.style.display !== "none" && rateInput.value) {
       hiddenRate.value = rateInput.value;
-      // If tc-helper has a value, recompute amount when rate changes
-      var tcVal = parseFloat(tcHelperInput && tcHelperInput.value) || 0;
-      var rate  = getRate();
-      if (tcVal > 0 && rate > 0) {
-        amountInput.value = (tcVal * rate).toFixed(2);
-      }
     }
     update();
   }
@@ -575,28 +524,10 @@
   if (contactSel)  contactSel.addEventListener("change", function() { filterBills(); update(); });
   if (billSel)     billSel.addEventListener("change", update);
   if (cashboxSel)  cashboxSel.addEventListener("change", update);
-  if (amountInput) amountInput.addEventListener("input", function() {
-    // User typed in amount manually → clear tc-helper to avoid confusion
-    if (tcHelperInput) tcHelperInput.value = "";
-    update();
-  });
+  if (amountInput) amountInput.addEventListener("input", update);
   if (rateInput)   rateInput.addEventListener("input", syncRate);
   if (modeSameRad) modeSameRad.addEventListener("change", update);
   if (modeBaseRad) modeBaseRad.addEventListener("change", update);
-
-  /* tc-helper: user enters bill-currency amount → convert to payment amount */
-  if (tcHelperInput) {
-    tcHelperInput.addEventListener("input", function() {
-      var tcVal = parseFloat(tcHelperInput.value) || 0;
-      var rate  = getRate();
-      if (tcVal > 0 && rate > 0) {
-        amountInput.value = (tcVal * rate).toFixed(2);
-      } else {
-        amountInput.value = "";
-      }
-      update();
-    });
-  }
 
   /* Ensure hidden fields are committed on submit */
   var payForm = document.getElementById("paymentForm");

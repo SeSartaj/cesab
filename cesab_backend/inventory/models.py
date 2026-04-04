@@ -140,6 +140,15 @@ class InventoryMovement(models.Model):
         verbose_name=_("Contact"),
         help_text=_("Vendor contact for cash-to-vendor purchases"),
     )
+    vendor_bill = models.ForeignKey(
+        "documents.VendorBill",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="inventory_movements",
+        verbose_name=_("Vendor Bill"),
+        help_text=_("Auto-created bill for credit purchases"),
+    )
     journal_entry = models.ForeignKey(
         "journal.JournalEntry",
         on_delete=models.PROTECT,

@@ -263,8 +263,6 @@
   var amtSym       = document.getElementById("amount-sym");
   var cbHint       = document.getElementById("cashbox-hint");
 
-  var _lastRateSeed = null; // "invPk:mode" — seed rate only when invoice/mode changes
-
   var invCard       = document.getElementById("invoice-card");
   var invCardTitle  = document.getElementById("inv-card-title");
   var invTotal      = document.getElementById("inv-total");
@@ -319,6 +317,13 @@
     update();
   }
 
+  if (walkInToggle) {
+    // Detect edit mode with income_account set
+    if (incomeSel && incomeSel.value) walkInToggle.checked = true;
+    applyWalkIn();
+    walkInToggle.addEventListener("change", applyWalkIn);
+  }
+
   /* Filter invoices by contact */
   var allInvOpts = invoiceSel
     ? Array.from(invoiceSel.options).map(function(o) {
@@ -360,13 +365,6 @@
     });
     cashboxSel.value = cur;
     if (cashboxSel.value !== cur) cashboxSel.value = "";
-  }
-
-  if (walkInToggle) {
-    // Detect edit mode with income_account set
-    if (incomeSel && incomeSel.value) walkInToggle.checked = true;
-    applyWalkIn();
-    walkInToggle.addEventListener("change", applyWalkIn);
   }
 
   function update() {
@@ -434,37 +432,22 @@
       hiddenCurr.value = String(baseCurrId);
     }
 
-    if (isForeign) {
+    if (mode === "same" && isForeign) {
       rateSection.style.display = "";
+      rateLabel.textContent     = "{% trans "Today's Exchange Rate" %} — {% trans 'required' %}";
+      rateDesc.innerHTML        =
+        "<strong>{% trans 'Current rate' %}:</strong> 1\u00a0" + inv.currency_code +
+        "\u00a0=\u00a0?\u00a0" + baseCurrCode +
+        ". <span class='text-muted'>{% trans 'Invoice was booked at' %} " +
+        inv.booking_rate.toFixed(4) + " — {% trans 'any difference becomes FX Gain/Loss.' %}</span>";
       rateUnit.textContent = baseCurrCode + "/" + inv.currency_code;
-      var rateSeedKey = (invoiceSel ? invoiceSel.value : "") + ":" + mode;
-      var shouldSeed  = (rateSeedKey !== _lastRateSeed);
-      if (shouldSeed) { _lastRateSeed = rateSeedKey; }
-      if (mode === "same") {
-        rateLabel.textContent = "{% trans "Today's Exchange Rate" %} — {% trans 'required' %}";
-        rateDesc.innerHTML =
-          "<strong>{% trans 'Current rate' %}:</strong> 1\u00a0" + inv.currency_code +
-          "\u00a0=\u00a0?\u00a0" + baseCurrCode +
-          ". <span class='text-muted'>{% trans 'Invoice was booked at' %} " +
-          inv.booking_rate.toFixed(4) + " — {% trans 'any difference becomes FX Gain/Loss.' %}</span>";
-        if (shouldSeed && (!rateInput.value || parseFloat(rateInput.value) <= 0)) {
-          rateInput.value = inv.booking_rate;
-        }
-      } else {
-        rateLabel.textContent = "{% trans "Today's Exchange Rate" %} — {% trans 'required' %}";
-        rateDesc.innerHTML =
-          "<strong>1\u00a0" + inv.currency_code + "\u00a0=\u00a0?\u00a0" + baseCurrCode + "</strong>" +
-          " <span class='text-muted'>{% trans 'Determines how many' %} " + inv.currency_code +
-          " {% trans 'are cleared from this invoice.' %}</span>";
-        if (shouldSeed && (!rateInput.value || parseFloat(rateInput.value) <= 0)) {
-          rateInput.value = inv.booking_rate;
-        }
+      if (!rateInput.value || parseFloat(rateInput.value) <= 0) {
+        rateInput.value = inv.booking_rate.toFixed(6);
       }
       hiddenRate.value = rateInput.value || String(inv.booking_rate);
     } else {
       rateSection.style.display = "none";
       hiddenRate.value = "1";
-      _lastRateSeed = null; // reset so next foreign invoice seeds fresh
     }
 
     fxCard.style.display = "";
@@ -516,18 +499,18 @@
       prevBase.style.display   = "";
       prevSimple.style.display = "none";
 
-      if (amt > 0 && rate > 0) {
-        var equivTc  = amt / rate;                      // invoice currency cleared at today's rate
+      if (amt > 0 && inv.booking_rate > 0) {
+        var equivTc  = amt / inv.booking_rate;
         var rem      = inv.balance_tc - equivTc;
         prevBaseAmt.textContent     = fmt(amt, baseCurrSym) + "\u00a0" + baseCurrCode;
         prevBaseEquivTc.textContent =
           "\u2248\u00a0" + fmt(equivTc, inv.currency_symbol) + "\u00a0" + inv.currency_code +
-          " (@\u00a0" + rate.toFixed(4) + ")";
+          " (@\u00a0" + inv.booking_rate.toFixed(4) + ")";
         prevRemBase.textContent     = fmt(Math.max(rem, 0), inv.currency_symbol) + "\u00a0" + inv.currency_code;
         prevRemBase.className       = "fw-semibold " + (rem > 0.005 ? "text-warning" : "text-success");
       } else {
         prevBaseAmt.textContent     = "—";
-        prevBaseEquivTc.textContent = amt > 0 ? "{% trans 'Enter exchange rate above' %}" : "—";
+        prevBaseEquivTc.textContent = "—";
         prevRemBase.textContent     = fmt(inv.balance_tc, inv.currency_symbol) + "\u00a0" + inv.currency_code;
         prevRemBase.className       = "fw-semibold text-warning";
       }

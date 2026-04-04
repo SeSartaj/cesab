@@ -6,6 +6,8 @@ from decimal import Decimal
 from django.db import transaction as db_transaction
 from django.utils import timezone
 
+from documents.models import VendorBill, VendorBillLine
+from documents.services import post_vendor_bill
 from journal.models import JournalEntry, JournalLine
 from .models import InventoryItem, InventoryMovement
 
@@ -124,9 +126,10 @@ def record_inventory_purchase_cash_to_vendor(project, user, date, item, quantity
 def record_inventory_purchase_on_credit(project, user, date, item, quantity, unit_cost,
                                          vendor, description="", currency=None, exchange_rate=1):
     """
-    Purchase inventory on credit from a vendor (creates a payable, no cash out).
-    Dr. Inventory Asset Account
-    Cr. Vendor Payable Account
+    Purchase inventory on credit from a vendor.
+
+    A posted vendor bill is created automatically so the payable can be tracked
+    through the documents workflow and later settled against the specific bill.
     """
     currency = currency or project.base_currency
     rate = Decimal(str(exchange_rate))
@@ -134,13 +137,25 @@ def record_inventory_purchase_on_credit(project, user, date, item, quantity, uni
     cost = Decimal(str(unit_cost))
     total = (qty * cost * rate).quantize(Decimal("0.01"))
 
-    je = _create_je(
-        project, user, date,
-        description or f"Inventory purchase on credit: {item.name} x {quantity} {item.unit} from {vendor.name}",
-        "inventory_purchase",
+    bill_description = description or f"Inventory purchase on credit: {item.name} x {quantity} {item.unit}"
+    bill = VendorBill.objects.create(
+        project=project,
+        contact=vendor,
+        date=date,
+        currency=currency,
+        exchange_rate=rate,
+        notes=bill_description,
+        created_by=user,
     )
-    _add_line(je, item.inventory_account, debit=qty * cost, currency=currency, exchange_rate=exchange_rate)
-    _add_line(je, vendor.payable_account, credit=qty * cost, currency=currency, exchange_rate=exchange_rate)
+    VendorBillLine.objects.create(
+        bill=bill,
+        description=bill_description,
+        account=item.inventory_account,
+        quantity=qty,
+        unit_price=cost,
+    )
+    post_vendor_bill(bill, user)
+    je = bill.journal_entry
 
     InventoryMovement.objects.create(
         project=project,
@@ -149,10 +164,12 @@ def record_inventory_purchase_on_credit(project, user, date, item, quantity, uni
         quantity=qty,
         unit_cost=cost,
         total_cost=total,
+        contact=vendor,
+        vendor_bill=bill,
         journal_entry=je,
         created_by=user,
     )
-    return je
+    return bill
 
 
 @db_transaction.atomic

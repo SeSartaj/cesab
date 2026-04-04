@@ -101,4 +101,53 @@
   </div>
 </div>
 {% endif %}
+
+{% if recent_movements %}
+<div class="card mt-4">
+  <div class="card-header"><i class="bi bi-clock-history"></i> {% trans "Recent Movements" %}</div>
+  <div class="card-body p-0">
+    <table class="table table-hover table-sm mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th>{% trans "Date" %}</th>
+          <th>{% trans "Type" %}</th>
+          <th>{% trans "Item" %}</th>
+          <th class="text-end">{% trans "Qty" %}</th>
+          <th class="text-end">{% trans "Unit Cost" %}</th>
+          <th class="text-end">{% trans "Total" %}</th>
+          <th>{% trans "Vendor" %}</th>
+          <th>{% trans "Bill" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for mv in recent_movements %}
+        <tr>
+          <td class="text-muted text-nowrap">{{ mv.journal_entry.date }}</td>
+          <td>
+            {% if mv.movement_type == "purchase" %}<span class="badge bg-success">{% trans "Purchase" %}</span>
+            {% elif mv.movement_type == "consumption" %}<span class="badge bg-danger">{% trans "Consumption" %}</span>
+            {% elif mv.movement_type == "adjustment" %}<span class="badge bg-warning text-dark">{% trans "Adjustment" %}</span>
+            {% else %}<span class="badge bg-info text-dark">{{ mv.get_movement_type_display }}</span>
+            {% endif %}
+          </td>
+          <td class="fw-semibold">{{ mv.item.name }}</td>
+          <td class="text-end">{{ mv.quantity|floatformat:2 }} <span class="text-muted">{{ mv.item.unit }}</span></td>
+          <td class="text-end text-muted">{{ mv.unit_cost|floatformat:2 }}</td>
+          <td class="text-end fw-semibold">{{ mv.total_cost|floatformat:2 }}</td>
+          <td>{% if mv.contact %}{{ mv.contact.name }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+          <td>
+            {% if mv.vendor_bill %}
+            <a href="{% url 'projects:bill_detail' project_pk=project.pk pk=mv.vendor_bill.pk %}"
+               class="badge bg-primary text-decoration-none">
+              {{ mv.vendor_bill.number }}
+            </a>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
