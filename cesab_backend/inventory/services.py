@@ -164,12 +164,10 @@ def record_inventory_purchase_on_credit(project, user, date, item, quantity, uni
         quantity=qty,
         unit_cost=cost,
         total_cost=total,
-        contact=vendor,
-        vendor_bill=bill,
         journal_entry=je,
         created_by=user,
     )
-    return bill
+    return je
 
 
 @db_transaction.atomic

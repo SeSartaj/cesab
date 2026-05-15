@@ -21,7 +21,13 @@ class Cashbox(models.Model):
         verbose_name_plural = _("Cashboxes")
 
     def __str__(self):
-        return self.name
+        from django.db.models import Sum
+        from journal.models import JournalLine
+        agg = JournalLine.objects.active().filter(account=self.account).aggregate(
+            d=Sum("debit_tc"), c=Sum("credit_tc")
+        )
+        bal = (agg["d"] or 0) - (agg["c"] or 0)
+        return f"{self.name} ({self.currency.code} {bal:,.2f})"
 
     def balance(self):
         from journal.models import JournalLine

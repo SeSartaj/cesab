@@ -304,6 +304,28 @@
   function getRate() { return parseFloat(rateInput && rateInput.value) || 0; }
   function getAmount() { return parseFloat(amountInput && amountInput.value) || 0; }
 
+  /* Snapshot option lists BEFORE any startup calls that trigger update() */
+  /* Filter invoices by contact */
+  var allInvOpts = invoiceSel
+    ? Array.from(invoiceSel.options).map(function(o) {
+        var inv = invoicesData[o.value];
+        return {value: o.value, text: o.text, contact_id: inv ? inv.contact_id : null};
+      })
+    : [];
+
+  /* Filter cashboxes */
+  var allCbOpts = cashboxSel
+    ? Array.from(cashboxSel.options).map(function(o) {
+        var c = cbData[o.value];
+        return {
+          value: o.value,
+          text: o.text,
+          currency_id: c && c.currency_id != null ? String(c.currency_id) : null,
+          selected: o.selected,
+        };
+      })
+    : [];
+
   /* Walk-in toggle */
   function applyWalkIn() {
     var walkIn = walkInToggle && walkInToggle.checked;
@@ -324,14 +346,6 @@
     walkInToggle.addEventListener("change", applyWalkIn);
   }
 
-  /* Filter invoices by contact */
-  var allInvOpts = invoiceSel
-    ? Array.from(invoiceSel.options).map(function(o) {
-        var inv = invoicesData[o.value];
-        return {value: o.value, text: o.text, contact_id: inv ? inv.contact_id : null};
-      })
-    : [];
-
   function filterInvoices() {
     if (!invoiceSel) return;
     var cid = contactSel ? parseInt(contactSel.value) || null : null;
@@ -346,22 +360,15 @@
     if (invoiceSel.value !== cur) invoiceSel.value = "";
   }
 
-  /* Filter cashboxes */
-  var allCbOpts = cashboxSel
-    ? Array.from(cashboxSel.options).map(function(o) {
-        var c = cbData[o.value];
-        return {value: o.value, text: o.text, currency_id: c ? c.currency_id : null};
-      })
-    : [];
-
   function filterCashboxes(targetCurrId) {
     if (!cashboxSel) return;
+    var wantedCurrencyId = targetCurrId != null ? String(targetCurrId) : null;
     var cur = cashboxSel.value;
     cashboxSel.innerHTML = "";
     allCbOpts.forEach(function(o) {
       if (!o.value) { cashboxSel.appendChild(new Option(o.text, "")); return; }
-      if (targetCurrId && o.currency_id && o.currency_id !== targetCurrId) return;
-      cashboxSel.appendChild(new Option(o.text, o.value));
+      if (wantedCurrencyId && o.currency_id && o.currency_id !== wantedCurrencyId) return;
+      cashboxSel.appendChild(new Option(o.text, o.value, false, o.value === cur));
     });
     cashboxSel.value = cur;
     if (cashboxSel.value !== cur) cashboxSel.value = "";

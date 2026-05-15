@@ -72,7 +72,7 @@ class InventoryCreditPurchaseTests(TestCase):
         )
 
     def test_credit_purchase_creates_posted_vendor_bill(self):
-        bill = record_inventory_purchase_on_credit(
+        journal_entry = record_inventory_purchase_on_credit(
             project=self.project,
             user=self.user,
             date=date(2026, 4, 4),
@@ -85,11 +85,10 @@ class InventoryCreditPurchaseTests(TestCase):
             exchange_rate=Decimal("1"),
         )
 
-        journal_entry = bill.journal_entry
         movement = InventoryMovement.objects.get(journal_entry=journal_entry)
+        bill = VendorBill.objects.get(journal_entry=journal_entry)
 
         self.assertEqual(movement.total_cost, Decimal("255.00"))
-        self.assertEqual(movement.vendor_bill, bill)
         self.assertEqual(bill.contact, self.vendor)
         self.assertEqual(bill.status, POSTED)
         self.assertEqual(bill.notes, "Credit purchase of cement")
