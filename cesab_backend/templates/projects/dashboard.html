@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n humanize %}
 {% block title %}{{ project.name }}{% endblock %}
 
 {% block sidebar %}{% include "projects/_sidebar.html" with active="dashboard" %}{% endblock %}
@@ -19,39 +19,53 @@
 </div>
 
 <!-- KPI cards -->
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h6 class="text-muted mb-0">{% trans "Financial Overview" %}</h6>
+  <a href="{% url 'projects:financial_reports' pk=project.pk %}" class="small text-decoration-none">{% trans "More" %} <i class="bi bi-arrow-right-short"></i></a>
+</div>
 <div class="row g-3 mb-4">
-  <div class="col-md-3">
+  <div class="col-md-3 col-sm-6">
     <div class="card text-center">
       <div class="card-body py-3">
         <div class="text-muted small">{% trans "Total Income" %}</div>
-        <div class="fs-5 fw-bold text-success">{{ total_income|floatformat:2 }}</div>
+        <div class="fs-5 fw-bold text-success">{{ total_income|floatformat:2|intcomma }} <span class="fs-6 fw-normal text-muted">{{ project.base_currency.code }}</span></div>
       </div>
     </div>
   </div>
-  <div class="col-md-3">
+  <div class="col-md-3 col-sm-6">
     <div class="card text-center">
       <div class="card-body py-3">
         <div class="text-muted small">{% trans "Total Expense" %}</div>
-        <div class="fs-5 fw-bold text-danger">{{ total_expense|floatformat:2 }}</div>
+        <div class="fs-5 fw-bold text-danger">{{ total_expense|floatformat:2|intcomma }} <span class="fs-6 fw-normal text-muted">{{ project.base_currency.code }}</span></div>
       </div>
     </div>
   </div>
-  <div class="col-md-3">
+  <div class="col-md-3 col-sm-6">
     <div class="card text-center">
       <div class="card-body py-3">
         <div class="text-muted small">{% trans "Net Profit" %}</div>
         <div class="fs-5 fw-bold {% if net_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
-          {{ net_profit|floatformat:2 }}
+          {{ net_profit|floatformat:2|intcomma }} <span class="fs-6 fw-normal text-muted">{{ project.base_currency.code }}</span>
         </div>
       </div>
     </div>
   </div>
-  <div class="col-md-3">
+  <div class="col-md-2 col-sm-6">
     <div class="card text-center">
       <div class="card-body py-3">
-        <div class="text-muted small">{% trans "Total Payables" %}</div>
+        <div class="text-muted small">{% trans "Receivables" %}</div>
+        <div class="fs-5 fw-bold {% if total_receivables > 0 %}text-info{% else %}text-success{% endif %}">
+          {{ total_receivables|floatformat:2|intcomma }} <span class="fs-6 fw-normal text-muted">{{ project.base_currency.code }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2 col-sm-6">
+    <div class="card text-center">
+      <div class="card-body py-3">
+        <div class="text-muted small">{% trans "Payables" %}</div>
         <div class="fs-5 fw-bold {% if total_payables > 0 %}text-warning{% else %}text-success{% endif %}">
-          {{ total_payables|floatformat:2 }}
+          {{ total_payables|floatformat:2|intcomma }} <span class="fs-6 fw-normal text-muted">{{ project.base_currency.code }}</span>
         </div>
       </div>
     </div>

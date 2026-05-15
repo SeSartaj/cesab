@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% load i18n humanize %}
+{% block title %}{% trans "Tax Report" %} — {{ project.name }}{% endblock %}
+{% block sidebar %}{% include "projects/_sidebar.html" with active="financial_reports" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h5 class="mb-0"><i class="bi bi-percent"></i> {% trans "VAT & Tax Report" %}</h5>
+    <small class="text-muted">{{ project.name }} &bull; {{ project.base_currency.code }} &bull; {% trans "Posted documents only" %}</small>
+  </div>
+  <a href="{% url 'projects:financial_reports' pk=project.pk %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> {% trans "Reports" %}
+  </a>
+</div>
+
+{% include "projects/reports/_date_filter.html" with clear_url=request.path %}
+
+{# ── Net VAT summary ──────────────────────────────────────────────────────── #}
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="card text-center">
+      <div class="card-body py-2">
+        <div class="text-muted small">{% trans "Total Input VAT" %}</div>
+        <div class="fs-5 fw-bold font-monospace text-info">{{ total_input_vat|floatformat:2|intcomma }}
+          <span class="fs-6 fw-normal text-muted">{{ project.base_currency.code }}</span></div>
+        <div class="text-muted" style="font-size:.75rem">{% trans "on" %} {{ total_input_base|floatformat:2|intcomma }} {% trans "taxable" %}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card text-center">
+      <div class="card-body py-2">
+        <div class="text-muted small">{% trans "Total Output VAT" %}</div>
+        <div class="fs-5 fw-bold font-monospace text-warning">{{ total_output_vat|floatformat:2|intcomma }}
+          <span class="fs-6 fw-normal text-muted">{{ project.base_currency.code }}</span></div>
+        <div class="text-muted" style="font-size:.75rem">{% trans "on" %} {{ total_output_base|floatformat:2|intcomma }} {% trans "taxable" %}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card text-center {% if net_vat > 0 %}border-danger{% elif net_vat < 0 %}border-success{% else %}border-secondary{% endif %}">
+      <div class="card-body py-2">
+        <div class="text-muted small">{% trans "Net VAT Payable" %}</div>
+        <div class="fs-5 fw-bold font-monospace {% if net_vat > 0 %}text-danger{% elif net_vat < 0 %}text-success{% endif %}">
+          {{ net_vat|floatformat:2|intcomma }}
+          <span class="fs-6 fw-normal text-muted">{{ project.base_currency.code }}</span>
+        </div>
+        <div class="text-muted" style="font-size:.75rem">
+          {% if net_vat > 0 %}{% trans "Payable to government" %}
+          {% elif net_vat < 0 %}{% trans "Refund due" %}
+          {% else %}{% trans "No net liability" %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Per-tax breakdown ────────────────────────────────────────────────────── #}
+{% if tax_rows %}
+<div class="card">
+  <div class="card-header fw-semibold"><i class="bi bi-table"></i> {% trans "Breakdown by Tax" %}</div>
+  <div class="card-body p-0">
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3" rowspan="2" style="vertical-align:middle">{% trans "Tax" %}</th>
+          <th class="ps-3" rowspan="2" style="vertical-align:middle">{% trans "Rate" %}</th>
+          <th class="text-center text-info border-start" colspan="2">
+            <i class="bi bi-arrow-down-circle"></i> {% trans "Input (Purchases)" %}
+          </th>
+          <th class="text-center text-warning border-start" colspan="2">
+            <i class="bi bi-arrow-up-circle"></i> {% trans "Output (Sales)" %}
+          </th>
+          <th class="text-end pe-3 border-start" rowspan="2" style="vertical-align:middle">{% trans "Net" %}</th>
+        </tr>
+        <tr>
+          <th class="text-end text-info border-start">{% trans "Taxable Base" %}</th>
+          <th class="text-end text-info">{% trans "VAT Amount" %}</th>
+          <th class="text-end text-warning border-start">{% trans "Taxable Base" %}</th>
+          <th class="text-end text-warning">{% trans "VAT Amount" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in tax_rows %}
+        <tr>
+          <td class="ps-3 align-middle fw-semibold">{{ row.tax.name }}</td>
+          <td class="align-middle text-muted small">{{ row.tax.rate_percent|floatformat:2 }}%</td>
+          <td class="text-end font-monospace align-middle border-start text-muted">
+            {% if row.input_base %}{{ row.input_base|floatformat:2|intcomma }}{% else %}&mdash;{% endif %}
+          </td>
+          <td class="text-end font-monospace align-middle text-info">
+            {% if row.input_vat %}{{ row.input_vat|floatformat:2|intcomma }}{% else %}&mdash;{% endif %}
+          </td>
+          <td class="text-end font-monospace align-middle border-start text-muted">
+            {% if row.output_base %}{{ row.output_base|floatformat:2|intcomma }}{% else %}&mdash;{% endif %}
+          </td>
+          <td class="text-end font-monospace align-middle text-warning">
+            {% if row.output_vat %}{{ row.output_vat|floatformat:2|intcomma }}{% else %}&mdash;{% endif %}
+          </td>
+          <td class="text-end pe-3 font-monospace fw-bold align-middle border-start
+              {% if row.net > 0 %}text-danger{% elif row.net < 0 %}text-success{% endif %}">
+            {{ row.net|floatformat:2|intcomma }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="table-dark">
+        <tr>
+          <td colspan="2" class="ps-3 fw-bold text-uppercase small">{% trans "Totals" %}</td>
+          <td class="text-end fw-bold font-monospace border-start">{{ total_input_base|floatformat:2|intcomma }}</td>
+          <td class="text-end fw-bold font-monospace">{{ total_input_vat|floatformat:2|intcomma }}</td>
+          <td class="text-end fw-bold font-monospace border-start">{{ total_output_base|floatformat:2|intcomma }}</td>
+          <td class="text-end fw-bold font-monospace">{{ total_output_vat|floatformat:2|intcomma }}</td>
+          <td class="text-end pe-3 fw-bold font-monospace border-start
+              {% if net_vat > 0 %}text-danger{% elif net_vat < 0 %}text-success{% endif %}">
+            {{ net_vat|floatformat:2|intcomma }}
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+{# ── Explanation legend ────────────────────────────────────────────────────  #}
+<div class="mt-3 text-muted small">
+  <strong>{% trans "Input VAT" %}:</strong> {% trans "Tax paid on purchases (vendor bills). Claimable as a deduction." %} &nbsp;&bull;&nbsp;
+  <strong>{% trans "Output VAT" %}:</strong> {% trans "Tax collected from customers (invoices). Owed to the government." %} &nbsp;&bull;&nbsp;
+  <strong>{% trans "Net" %} = {% trans "Output − Input" %}:</strong>
+  {% trans "Positive = payable to government. Negative = refund due." %}
+</div>
+
+{% else %}
+<div class="alert alert-light border text-muted">
+  <i class="bi bi-inbox"></i>
+  {% if date_from or date_to %}
+  {% trans "No tax lines found in posted documents for the selected date range." %}
+  {% else %}
+  {% trans "No tax lines found in posted documents for this project." %}
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

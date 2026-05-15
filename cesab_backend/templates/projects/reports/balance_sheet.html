@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% load i18n humanize %}
+{% block title %}{% trans "Balance Sheet" %} — {{ project.name }}{% endblock %}
+{% block sidebar %}{% include "projects/_sidebar.html" with active="financial_reports" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h5 class="mb-0"><i class="bi bi-building"></i> {% trans "Balance Sheet" %}</h5>
+    <small class="text-muted">{{ project.name }} &bull; {{ project.base_currency.code }}</small>
+  </div>
+  <a href="{% url 'projects:financial_reports' pk=project.pk %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> {% trans "Reports" %}
+  </a>
+</div>
+
+{# Balance sheet is a snapshot — only date_to is meaningful #}
+<form method="get" class="row g-2 align-items-end mb-4">
+  <div class="col-sm-auto">
+    <label class="form-label small fw-semibold mb-1">{% trans "As of" %}</label>
+    <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}">
+  </div>
+  <div class="col-sm-auto">
+    <button type="submit" class="btn btn-sm btn-primary">
+      <i class="bi bi-funnel"></i> {% trans "Apply" %}
+    </button>
+    {% if date_to %}
+    <a href="{{ request.path }}" class="btn btn-sm btn-outline-secondary ms-1">
+      <i class="bi bi-x"></i> {% trans "Clear" %}
+    </a>
+    {% endif %}
+  </div>
+  {% if date_to %}
+  <div class="col-12">
+    <span class="badge bg-light text-dark border small">
+      <i class="bi bi-calendar-check"></i> {% trans "As of" %} {{ date_to }}
+    </span>
+  </div>
+  {% endif %}
+</form>
+
+{% if not is_balanced %}
+<div class="alert alert-danger d-flex align-items-center gap-2 mb-3" role="alert">
+  <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+  <div>
+    <strong>{% trans "Balance sheet does not balance!" %}</strong>
+    {% trans "Total assets do not equal total liabilities + equity. This indicates a data integrity problem." %}
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+
+  {# ── Left side: Assets ─────────────────────────────────────────────────── #}
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between">
+        <span class="fw-semibold"><i class="bi bi-coin"></i> {% trans "Assets" %}</span>
+        <span class="fw-bold font-monospace text-primary">{{ total_assets|floatformat:2|intcomma }}</span>
+      </div>
+      <div class="card-body p-0">
+        {% if asset_rows %}
+        <table class="table table-sm mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-3" style="width:6rem">{% trans "Code" %}</th>
+              <th>{% trans "Account" %}</th>
+              <th class="text-end pe-3">{% trans "Balance" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in asset_rows %}
+            <tr>
+              <td class="ps-3 text-muted small align-middle">{{ row.account.code }}</td>
+              <td class="align-middle">{{ row.account.name }}</td>
+              <td class="text-end pe-3 font-monospace align-middle {% if row.balance >= 0 %}text-primary{% else %}text-danger{% endif %}">
+                {{ row.balance|floatformat:2|intcomma }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="table-light">
+            <tr>
+              <td colspan="2" class="ps-3 fw-bold small text-uppercase">{% trans "Total Assets" %}</td>
+              <td class="text-end pe-3 fw-bold font-monospace text-primary">{{ total_assets|floatformat:2|intcomma }}</td>
+            </tr>
+          </tfoot>
+        </table>
+        {% else %}
+        <div class="p-3 text-muted small">{% trans "No asset accounts with activity." %}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ── Right side: Liabilities + Equity ──────────────────────────────────── #}
+  <div class="col-lg-6">
+
+    {# Liabilities #}
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <span class="fw-semibold"><i class="bi bi-credit-card"></i> {% trans "Liabilities" %}</span>
+        <span class="fw-bold font-monospace text-warning">{{ total_liabilities|floatformat:2|intcomma }}</span>
+      </div>
+      <div class="card-body p-0">
+        {% if liability_rows %}
+        <table class="table table-sm mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-3" style="width:6rem">{% trans "Code" %}</th>
+              <th>{% trans "Account" %}</th>
+              <th class="text-end pe-3">{% trans "Balance" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in liability_rows %}
+            <tr>
+              <td class="ps-3 text-muted small align-middle">{{ row.account.code }}</td>
+              <td class="align-middle">{{ row.account.name }}</td>
+              <td class="text-end pe-3 font-monospace align-middle text-warning">
+                {{ row.balance|floatformat:2|intcomma }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="table-light">
+            <tr>
+              <td colspan="2" class="ps-3 fw-bold small text-uppercase">{% trans "Total Liabilities" %}</td>
+              <td class="text-end pe-3 fw-bold font-monospace text-warning">{{ total_liabilities|floatformat:2|intcomma }}</td>
+            </tr>
+          </tfoot>
+        </table>
+        {% else %}
+        <div class="p-3 text-muted small">{% trans "No liability accounts with activity." %}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Equity #}
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <span class="fw-semibold"><i class="bi bi-pie-chart"></i> {% trans "Equity" %}</span>
+        <span class="fw-bold font-monospace text-success">{{ total_equity_inc_retained|floatformat:2|intcomma }}</span>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-3" style="width:6rem">{% trans "Code" %}</th>
+              <th>{% trans "Account" %}</th>
+              <th class="text-end pe-3">{% trans "Balance" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in equity_rows %}
+            <tr>
+              <td class="ps-3 text-muted small align-middle">{{ row.account.code }}</td>
+              <td class="align-middle">{{ row.account.name }}</td>
+              <td class="text-end pe-3 font-monospace align-middle text-success">
+                {{ row.balance|floatformat:2|intcomma }}
+              </td>
+            </tr>
+            {% endfor %}
+            {# Retained earnings row — always shown for transparency #}
+            <tr class="table-light">
+              <td class="ps-3 text-muted small align-middle">—</td>
+              <td class="align-middle fst-italic text-muted">{% trans "Retained Earnings (Net Profit)" %}</td>
+              <td class="text-end pe-3 font-monospace align-middle {% if retained_earnings >= 0 %}text-success{% else %}text-danger{% endif %}">
+                {{ retained_earnings|floatformat:2|intcomma }}
+              </td>
+            </tr>
+          </tbody>
+          <tfoot class="table-light">
+            <tr>
+              <td colspan="2" class="ps-3 fw-bold small text-uppercase">{% trans "Total Equity" %}</td>
+              <td class="text-end pe-3 fw-bold font-monospace text-success">{{ total_equity_inc_retained|floatformat:2|intcomma }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    {# Check line #}
+    <div class="card mt-3 {% if is_balanced %}border-success{% else %}border-danger{% endif %}">
+      <div class="card-body py-2 d-flex justify-content-between align-items-center">
+        <span class="fw-bold text-uppercase small">{% trans "Total Liabilities + Equity" %}</span>
+        <span class="fw-bold font-monospace {% if is_balanced %}text-success{% else %}text-danger{% endif %}">
+          {{ total_liab_equity|floatformat:2|intcomma }}
+          {% if is_balanced %}
+          <i class="bi bi-check-circle-fill ms-1"></i>
+          {% else %}
+          <i class="bi bi-exclamation-circle-fill ms-1"></i>
+          {% endif %}
+        </span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

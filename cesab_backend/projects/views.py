@@ -193,6 +193,14 @@ def project_dashboard(request, pk):
     liability_accounts = Account.objects.filter(project=project, account_type="liability", is_active=True)
     total_payables = sum(a.balance() for a in liability_accounts if a.balance() > 0)
 
+    # Total receivables (asset accounts linked as contact receivable accounts)
+    from vendors.models import Contact as VendorContact
+    rec_account_ids = VendorContact.objects.filter(
+        project=project, is_active=True, receivable_account__isnull=False
+    ).values_list("receivable_account_id", flat=True)
+    rec_accounts = Account.objects.filter(pk__in=rec_account_ids, is_active=True)
+    total_receivables = sum(a.balance() for a in rec_accounts if a.balance() > 0)
+
     # Recent journal entries
     recent_entries = project.journal_entries.all()[:10]
 
@@ -204,6 +212,7 @@ def project_dashboard(request, pk):
         "total_expense": total_expense,
         "net_profit": total_income - total_expense,
         "total_payables": total_payables,
+        "total_receivables": total_receivables,
         "recent_entries": recent_entries,
         **perm_ctx,
     })
@@ -310,3 +319,70 @@ def remove_member(request, pk, member_pk):
         messages.success(request, _("%(user)s removed from project.") % {"user": username})
 
     return redirect("projects:members", pk=pk)
+
+
+# ---------------------------------------------------------------------------
+# Financial Reports
+# ---------------------------------------------------------------------------
+
+@login_required
+def financial_reports_summary(request, pk):
+    """Financial reports landing page — receivables & payables per currency."""
+    project = get_object_or_404(Project, pk=pk)
+
+    if not _require_project_access(request.user, project):
+        messages.error(request, _("You do not have access to this project."))
+        return redirect("projects:list")
+
+    from django.db.models import Sum
+    from collections import defaultdict
+    from decimal import Decimal
+    from vendors.models import Contact as VendorContact
+    from journal.models import JournalLine
+
+    contacts = VendorContact.objects.filter(project=project, is_active=True)
+
+    rec_account_ids = list(contacts.filter(
+        receivable_account__isnull=False
+    ).values_list("receivable_account_id", flat=True))
+
+    pay_account_ids = list(contacts.filter(
+        payable_account__isnull=False
+    ).values_list("payable_account_id", flat=True))
+
+    def _per_currency(account_ids, sign=1):
+        """
+        Aggregate TC debit/credit for the given accounts, grouped by currency.
+        sign=1  → asset-style: balance = debit_tc - credit_tc  (receivables)
+        sign=-1 → liability-style: balance = credit_tc - debit_tc  (payables)
+        Returns list of {'currency': code, 'balance': Decimal} sorted by code.
+        """
+        if not account_ids:
+            return []
+        rows = (
+            JournalLine.objects.active()
+            .filter(account_id__in=account_ids)
+            .values("transaction_currency__code")
+            .annotate(d=Sum("debit_tc"), c=Sum("credit_tc"))
+        )
+        result = {}
+        for row in rows:
+            code = row["transaction_currency__code"]
+            d = row["d"] or Decimal("0")
+            c = row["c"] or Decimal("0")
+            balance = (d - c) if sign == 1 else (c - d)
+            if balance != Decimal("0"):
+                result[code] = result.get(code, Decimal("0")) + balance
+        return [{"currency": k, "balance": v} for k, v in sorted(result.items())]
+
+    receivables_by_currency = _per_currency(rec_account_ids, sign=1)
+    payables_by_currency = _per_currency(pay_account_ids, sign=-1)
+
+    perm_ctx = _project_permission_ctx(request.user, project)
+
+    return render(request, "projects/financial_reports.html", {
+        "project": project,
+        "receivables_by_currency": receivables_by_currency,
+        "payables_by_currency": payables_by_currency,
+        **perm_ctx,
+    })

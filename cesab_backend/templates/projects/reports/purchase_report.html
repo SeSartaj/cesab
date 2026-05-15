@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% load i18n humanize %}
+{% block title %}{% trans "Purchase Report" %} — {{ project.name }}{% endblock %}
+{% block sidebar %}{% include "projects/_sidebar.html" with active="financial_reports" %}{% endblock %}
+{% block main_class %}col-md-10{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h5 class="mb-0"><i class="bi bi-cart3"></i> {% trans "Purchase & Cost Report" %}</h5>
+    <small class="text-muted">{{ project.name }} &bull; {{ project.base_currency.code }} &bull; {% trans "Posted bills only" %}</small>
+  </div>
+  <a href="{% url 'projects:financial_reports' pk=project.pk %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> {% trans "Reports" %}
+  </a>
+</div>
+
+{% include "projects/reports/_date_filter.html" with clear_url=request.path %}
+
+{# ── Summary totals ────────────────────────────────────────────────────────#}
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="card text-center">
+      <div class="card-body py-2">
+        <div class="text-muted small">{% trans "Total (excl. tax)" %}</div>
+        <div class="fs-5 fw-bold font-monospace">{{ total_purchases_subtotal|floatformat:2|intcomma }}
+          <span class="fs-6 fw-normal text-muted">{{ project.base_currency.code }}</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card text-center">
+      <div class="card-body py-2">
+        <div class="text-muted small">{% trans "Tax" %}</div>
+        <div class="fs-5 fw-bold font-monospace text-warning">{{ total_purchases_tax|floatformat:2|intcomma }}
+          <span class="fs-6 fw-normal text-muted">{{ project.base_currency.code }}</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card text-center border-primary">
+      <div class="card-body py-2">
+        <div class="text-muted small">{% trans "Total (incl. tax)" %}</div>
+        <div class="fs-5 fw-bold font-monospace text-primary">{{ total_purchases|floatformat:2|intcomma }}
+          <span class="fs-6 fw-normal text-muted">{{ project.base_currency.code }}</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if supplier_rows or account_rows %}
+
+{# ── Supplier-wise breakdown ───────────────────────────────────────────────#}
+<div class="card mb-4">
+  <div class="card-header fw-semibold">
+    <i class="bi bi-person-lines-fill"></i> {% trans "By Supplier" %}
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">{% trans "Supplier" %}</th>
+          <th class="text-end">{% trans "Bills" %}</th>
+          <th class="text-end">{% trans "Subtotal" %}</th>
+          <th class="text-end">{% trans "Tax" %}</th>
+          <th class="text-end pe-3">{% trans "Total" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in supplier_rows %}
+        <tr>
+          <td class="ps-3 align-middle">{{ row.name }}</td>
+          <td class="text-end align-middle text-muted small">{{ row.count }}</td>
+          <td class="text-end font-monospace align-middle">{{ row.subtotal|floatformat:2|intcomma }}</td>
+          <td class="text-end font-monospace align-middle text-warning">
+            {% if row.tax %}{{ row.tax|floatformat:2|intcomma }}{% else %}&mdash;{% endif %}
+          </td>
+          <td class="text-end pe-3 font-monospace fw-semibold align-middle">{{ row.total|floatformat:2|intcomma }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="table-dark">
+        <tr>
+          <td class="ps-3 fw-bold text-uppercase small" colspan="2">{% trans "Total" %}</td>
+          <td class="text-end fw-bold font-monospace">{{ total_purchases_subtotal|floatformat:2|intcomma }}</td>
+          <td class="text-end fw-bold font-monospace">{{ total_purchases_tax|floatformat:2|intcomma }}</td>
+          <td class="text-end pe-3 fw-bold font-monospace">{{ total_purchases|floatformat:2|intcomma }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+{# ── Expense-account breakdown ─────────────────────────────────────────────#}
+<div class="card">
+  <div class="card-header fw-semibold">
+    <i class="bi bi-diagram-3"></i> {% trans "By Expense Account" %}
+  </div>
+  <div class="card-body p-0">
+    {% if account_rows %}
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3" style="width:6rem">{% trans "Code" %}</th>
+          <th>{% trans "Account" %}</th>
+          <th class="text-end">{% trans "Subtotal" %}</th>
+          <th class="text-end">{% trans "Tax" %}</th>
+          <th class="text-end pe-3">{% trans "Total" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in account_rows %}
+        <tr>
+          <td class="ps-3 text-muted small align-middle">{{ row.account.code }}</td>
+          <td class="align-middle">{{ row.account.name }}</td>
+          <td class="text-end font-monospace align-middle">{{ row.subtotal|floatformat:2|intcomma }}</td>
+          <td class="text-end font-monospace align-middle text-warning">
+            {% if row.tax %}{{ row.tax|floatformat:2|intcomma }}{% else %}&mdash;{% endif %}
+          </td>
+          <td class="text-end pe-3 font-monospace fw-semibold align-middle">{{ row.total|floatformat:2|intcomma }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="p-3 text-muted small">{% trans "No bill line detail available." %}</div>
+    {% endif %}
+  </div>
+</div>
+
+{% else %}
+<div class="alert alert-light border text-muted">
+  <i class="bi bi-inbox"></i>
+  {% if date_from or date_to %}
+  {% trans "No posted vendor bills found for the selected date range." %}
+  {% else %}
+  {% trans "No posted vendor bills found for this project." %}
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
