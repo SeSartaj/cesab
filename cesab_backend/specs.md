@@ -6,7 +6,6 @@ in other currencies, for that it should be tracked, which currency was used and 
 to the base currency at that time. this system is in islamic country, so no interest (riba), insurance in it.
 
 
-
 # Architecture
 - all business logic must be in services folders. this way, the whole business logic can be unit-tested, and I can easily swap frontend and use react in the future
 - support english and persian switching. 
